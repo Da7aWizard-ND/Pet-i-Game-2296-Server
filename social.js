@@ -471,7 +471,7 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
   setInterval(rollover, 60 * 1000);
   rollover();
 
-  return { identify, profile, badge, awardMatch, handlers, turf, packRoomFor, canJoinPackRoom, packTagOf, RANKS };
+  return { identify, playerOf, profile, badge, awardMatch, handlers, turf, packRoomFor, canJoinPackRoom, packTagOf, RANKS };
 }
 
 module.exports = { createSocial, RANKS, weekId, seasonId };

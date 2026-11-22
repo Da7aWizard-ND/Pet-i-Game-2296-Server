@@ -24,6 +24,7 @@ class Store {
     this.log = log || console.log;
     this.players = new Map(); // pid -> player record
     this.packs = new Map();   // pack id -> pack record
+    this.codes = new Map();   // 12-digit gift code -> code record (codes.js)
     this.meta = { week: null, season: null, champion: null, lastWeekPacks: [] };
     this._dirty = new Set();  // keys like "p:<pid>", "k:<id>", "meta"
     this._timer = null;
@@ -68,11 +69,17 @@ class Store {
     if (k === "meta") Object.assign(this.meta, v);
     else if (k.startsWith("p:")) this.players.set(k.slice(2), v);
     else if (k.startsWith("k:")) this.packs.set(k.slice(2), v);
+    else if (k.startsWith("c:")) this.codes.set(k.slice(2), v);
   }
 
   touchPlayer(p) { this._mark("p:" + p.pid); }
   touchPack(k) { this._mark("k:" + k.id); }
   touchMeta() { this._mark("meta"); }
+  touchCode(c) { this._mark("c:" + c.code); }
+  dropCode(code) {
+    this.codes.delete(code);
+    this._mark("c:" + code);
+  }
   dropPack(id) {
     this.packs.delete(id);
     this._mark("k:" + id);
@@ -87,6 +94,7 @@ class Store {
     if (key === "meta") return this.meta;
     if (key.startsWith("p:")) return this.players.get(key.slice(2));
     if (key.startsWith("k:")) return this.packs.get(key.slice(2));
+    if (key.startsWith("c:")) return this.codes.get(key.slice(2));
     return undefined;
   }
 
@@ -107,6 +115,7 @@ class Store {
         const all = { meta: this.meta };
         for (const [pid, p] of this.players) all["p:" + pid] = p;
         for (const [id, k] of this.packs) all["k:" + id] = k;
+        for (const [code, v] of this.codes) all["c:" + code] = v;
         fs.mkdirSync(path.dirname(this._file), { recursive: true });
         const tmp = this._file + ".tmp";
         fs.writeFileSync(tmp, JSON.stringify(all));
