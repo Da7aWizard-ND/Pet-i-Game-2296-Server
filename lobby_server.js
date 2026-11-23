@@ -22,6 +22,7 @@ const { WebSocketServer } = require("ws");
 const { cleanText, cleanTag } = require("./filter");
 const { Store } = require("./store");
 const { createSocial } = require("./social");
+const { createCodes } = require("./codes");
 
 const PROTOCOL = 1;              // bump when the message format changes (old games get "please update")
 const PORT = parseInt(process.env.PORT || "8080", 10);
@@ -41,7 +42,7 @@ const QUICK_CHAT_COUNT = 12;
 // Match settings the host may change, with what's allowed.
 const SETTING_RULES = {
   mode: (v) => ["classic", "tag", "infection", "heist", "alpha", "blackout", "freeze", "mole"].includes(v),
-  level: (v) => ["megastore", "vet", "warehouse", "garden"].includes(v),
+  level: (v) => ["megastore", "vet", "warehouse", "garden", "dogpark", "funhouse", "military"].includes(v),
   difficulty: (v) => ["easy", "normal", "hard"].includes(v),
   bots: (v) => Number.isInteger(v) && v >= 0 && v <= 30,
   items_trip: (v) => Number.isInteger(v) && v >= 0 && v <= 5,
@@ -465,6 +466,7 @@ async function main() {
   await store.open();
   social = createSocial({ store, clients, send, error, log, cleanText, cleanTag });
   Object.assign(handlers, social.handlers);
+  Object.assign(handlers, createCodes({ store, send, error, log, playerOf: social.playerOf }).handlers);
   server.listen(PORT, () => log(`i-Pet Cyber Store 2096 lobby listening on port ${PORT}`));
 }
 
