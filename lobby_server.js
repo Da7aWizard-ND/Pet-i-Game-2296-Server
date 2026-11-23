@@ -22,7 +22,6 @@ const { WebSocketServer } = require("ws");
 const { cleanText, cleanTag } = require("./filter");
 const { Store } = require("./store");
 const { createSocial } = require("./social");
-const { createCodes } = require("./codes");
 
 const PROTOCOL = 1;              // bump when the message format changes (old games get "please update")
 const PORT = parseInt(process.env.PORT || "8080", 10);
@@ -466,7 +465,6 @@ async function main() {
   await store.open();
   social = createSocial({ store, clients, send, error, log, cleanText, cleanTag });
   Object.assign(handlers, social.handlers);
-  Object.assign(handlers, createCodes({ store, send, error, log, playerOf: social.playerOf }).handlers);
   server.listen(PORT, () => log(`i-Pet Cyber Store 2096 lobby listening on port ${PORT}`));
 }
 
