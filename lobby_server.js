@@ -23,6 +23,7 @@ const { cleanText, cleanTag } = require("./filter");
 const { Store } = require("./store");
 const { createSocial } = require("./social");
 const { createCodes } = require("./codes");
+const { createConfig } = require("./config");
 
 const PROTOCOL = 1;              // bump when the message format changes (old games get "please update")
 const PORT = parseInt(process.env.PORT || "8080", 10);
@@ -65,6 +66,7 @@ function log(...a) {
 // Paw Points, leaderboards and Packs (see social.js); saved by store.js.
 const store = new Store(log);
 let social = null;
+let config = null;
 
 // ------------------------------------------------------------------ helpers --
 
@@ -203,7 +205,7 @@ const handlers = {
     c.hello = true;
     social.identify(c, m.key);
     send(c, { t: "welcome", id: c.id, tag: c.tag, protocol: PROTOCOL, max_players: MAX_PLAYERS, quick_count: QUICK_CHAT_COUNT,
-      profile: social.profile(c) });
+      profile: social.profile(c), cfg: config.current(), cfg_updated: config.updated() });
   },
 
   create(c, m) {
@@ -402,6 +404,12 @@ function applySettings(room, s) {
 // ------------------------------------------------------------------ server --
 
 const server = http.createServer((req, res) => {
+  // The game downloads the live game settings here when it starts (GameConfig).
+  if (req.url && req.url.split("?")[0].replace(/\/+$/, "") === "/config") {
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+    res.end(JSON.stringify({ values: config ? config.current() : {}, updated: config ? config.updated() : "" }));
+    return;
+  }
   res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
   res.end(`i-Pet Cyber Store 2096 lobby OK · ${clients.size} online · ${rooms.size} rooms · ${store.players.size} players · ${store.packs.size} packs (${store.kind})\n`);
 });
@@ -467,6 +475,8 @@ async function main() {
   social = createSocial({ store, clients, send, error, log, cleanText, cleanTag });
   Object.assign(handlers, social.handlers);
   Object.assign(handlers, createCodes({ store, send, error, log, playerOf: social.playerOf }).handlers);
+  config = createConfig({ store, clients, send, error, log });
+  Object.assign(handlers, config.handlers);
   server.listen(PORT, () => log(`i-Pet Cyber Store 2096 lobby listening on port ${PORT}`));
 }
 

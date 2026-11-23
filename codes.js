@@ -63,7 +63,8 @@ function createCodes({ store, send, error, log, playerOf }) {
     let hat = typeof r.hat === "string" ? r.hat : "";
     if (!/^[a-z]{0,12}$/.test(hat)) hat = "";
     const note = typeof r.note === "string" ? r.note.replace(/[^\w .,!?'-]/g, "").slice(0, 40) : "";
-    return { bolts, item, hat, note };
+    const vend = Math.max(0, Math.min(10, Math.floor(Number(r.vend) || 0)));   // one-use vending passes
+    return { bolts, item, hat, note, vend };
   }
 
   function view(code) {
