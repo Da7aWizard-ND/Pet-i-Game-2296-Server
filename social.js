@@ -14,7 +14,21 @@ const crypto = require("crypto");
 const PP_MATCH_CAP = 150;     // most Paw Points one match can give a player
 const PP_DAY_CAP = 1500;      // most a player can earn in one day
 const MIN_MATCH_MS = parseInt(process.env.IPET_MIN_MATCH_MS || "60000", 10);   // tests can shorten it
-const PACK_MAX = 20;
+const PACK_MAX = 20;            // default size for packs made before sizes could be chosen
+const PACK_SIZE_MIN = 6;
+const PACK_SIZE_MAX = 40;
+const PACK_COLOURS = 24;
+const PACK_SHAPES = 24;
+const PACK_SPECIES = 16;
+const MAX_OFFICERS = 3;
+const REQUEST_DAYS = 7;
+const GIFT_BOLTS_DAY = 100;      // most bolts one player can send a day
+const GIFT_ITEMS_DAY = 1;        // most special items one player can send a day
+const GIFT_MIN_DAYS = 3;         // days in the Pack before you can send or receive gifts
+const FACTIONS = ["Neon Night Shift", "Chrome Couriers", "Circuit Strays", "Kibble Syndicate"];
+const FACTION_WIN_BOLTS = 50;    // each member of last week's winning faction
+const FACTION_SMALL_BONUS = 0.10; // smallest faction earns this much more Paw Points
+const ITEM_ID_RE = /^[a-z]{2,12}$/;
 const PACK_CHAT_KEEP = 40;
 const PACK_REWARD_BOLTS = 60;
 const CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -57,6 +71,11 @@ function rankOf(pp) {
   return r;
 }
 
+function cleanCountry(v) {
+  const s = String(v || "").toUpperCase();
+  return /^[A-Z]{2}$/.test(s) ? s : "";
+}
+
 function int(v, lo, hi) {
   const n = Math.round(Number(v) || 0);
   return Math.max(lo, Math.min(hi, n));
@@ -79,6 +98,9 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
         .sort((a, b) => b.week.pp - a.week.pp).slice(0, 3)
         .map((k) => ({ tag: k.tag, name: k.name, colour: k.colour, pp: k.week.pp }));
       if (best) log(`Pet of the Week: ${best.tag} (${best.week.pp} PP)`);
+      const fw = factionScores(last);
+      const top = fw.reduce((a, b) => (b.pp > a.pp ? b : a), fw[0]);
+      store.meta.factionWin = top && top.pp > 0 ? { faction: top.faction, week: last, pp: top.pp } : null;
     }
     store.meta.week = w;
     store.meta.season = seasonId();
@@ -145,8 +167,12 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
     return {
       week_pp: week(p).pp, season_pp: s, total: p.total, matches: p.matches,
       rank: r, rank_name: RANKS[r].name, next_at: r + 1 < RANKS.length ? RANKS[r + 1].at : null,
-      pack: k ? { id: k.id, tag: k.tag, name: k.name, colour: k.colour, emblem: k.emblem } : null,
+      pack: k ? patchOf(k) : null,
       champion: store.meta.champion,
+      faction_win: store.meta.factionWin || null,
+      faction_reward: k && store.meta.factionWin && k.faction === store.meta.factionWin.faction
+        && p.factionClaim !== store.meta.factionWin.week ? FACTION_WIN_BOLTS : 0,
+      inbox: (p.inbox || []).length,
     };
   }
 
@@ -181,6 +207,8 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
       const before = rankOf(season(p).pp);
       const day = today(p);
       let gained = int(row.pp, 0, PP_MATCH_CAP);
+      const myPack = packOf(p);
+      if (myPack && myPack.faction === smallestFaction()) gained = Math.round(gained * (1 + FACTION_SMALL_BONUS));
       gained = Math.min(gained, Math.max(0, PP_DAY_CAP - day.pp));
       const role = row.role === "catcher" ? "catcher" : "hider";
       day.pp += gained;
@@ -219,7 +247,7 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
         .map((k) => ({ k, pp: k.week && k.week.id === w ? k.week.pp : 0 }))
         .filter((x) => x.pp > 0)
         .sort((a, b) => b.pp - a.pp)
-        .map((x) => ({ id: x.k.id, tag: x.k.tag, name: x.k.name, colour: x.k.colour, emblem: x.k.emblem, members: x.k.members.length, pp: x.pp }));
+        .map((x) => ({ id: x.k.id, ...patchOf(x.k), members: x.k.members.length, pp: x.pp }));
     }
     const value = (p) => {
       if (tab === "season") return p.season && p.season.id === s ? p.season.pp : 0;
@@ -263,6 +291,7 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
       t: "board", tab, total: rows.length, top: rows.slice(0, 10).map(strip), around: around.map(strip),
       me: at >= 0 ? at + 1 : 0, champion: store.meta.champion, last_packs: store.meta.lastWeekPacks || [],
       turf: turf(), season: seasonLabel(seasonId()), week_ends_in: Math.round((weekEndsAt() - Date.now()) / 1000),
+      factions: factionScores(weekId()), faction_win: store.meta.factionWin || null, smallest_faction: smallestFaction(),
       profile: profile(c),
     });
   }
@@ -290,13 +319,21 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
     const g = GOALS.find((x) => x.type === kw.goal) || GOALS[0];
     const owned = Object.entries(turf()).filter(([, o]) => o.tag === k.tag).map(([level]) => level);
     return {
-      t: "pack", id: k.id, name: k.name, tag: k.tag, colour: k.colour, emblem: k.emblem, code: k.code,
-      leader: k.leader === (viewer && viewer.pid), max: PACK_MAX,
+      t: "pack", id: k.id, ...patchOf(k), code: k.code,
+      leader: k.leader === (viewer && viewer.pid), officer: !!viewer && (k.officers || []).includes(viewer.pid),
+      max: k.max || PACK_MAX, size_min: PACK_SIZE_MIN, size_max: PACK_SIZE_MAX,
+      faction_locked: k.factionSeason === seasonId() && !!k.factionSet,
+      factions: factionScores(weekId()), smallest_faction: smallestFaction(),
+      requests: canApprove(k, viewer) ? pruneRequests(k).map((r) => ({ pid: r.pid, tag: r.tag, species: r.species,
+        days_left: Math.max(1, Math.ceil((r.at + REQUEST_DAYS * DAY_MS - Date.now()) / DAY_MS)) })) : [],
+      gift: viewer ? giftLeft(viewer, k) : null,
       members: k.members.map((pid) => {
         const p = store.players.get(pid) || { tag: "?" };
         return { pid, tag: p.tag, species: p.species || 0, week_pp: p.week && p.week.id === weekId() ? p.week.pp : 0,
-          rank: rankOf(p.season && p.season.id === seasonId() ? p.season.pp : 0), leader: pid === k.leader, online: online.has(pid) };
-      }).sort((a, b) => b.week_pp - a.week_pp),
+          rank: rankOf(p.season && p.season.id === seasonId() ? p.season.pp : 0), leader: pid === k.leader,
+          officer: (k.officers || []).includes(pid), online: online.has(pid),
+          can_gift: memberDays(k, pid) >= GIFT_MIN_DAYS };
+      }).sort((a, b) => (b.leader - a.leader) || (b.officer - a.officer) || (b.week_pp - a.week_pp)),
       goal: { label: g.label.replace("%d", kw.target), type: kw.goal, progress: kw.progress, target: kw.target,
         done: kw.progress >= kw.target, claimed: !!viewer && kw.claimed.includes(viewer.pid), reward: PACK_REWARD_BOLTS },
       week_pp: kw.pp, turf: owned, chat: (k.chat || []).slice(-PACK_CHAT_KEEP),
@@ -329,13 +366,84 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
       log(`pack [${k.tag}] closed`);
       return;
     }
-    if (k.leader === p.pid) k.leader = k.members[0];
+    k.officers = (k.officers || []).filter((x) => x !== p.pid);
+    if (k.joined) delete k.joined[p.pid];
+    if (k.leader === p.pid) {
+      const byAge = [...k.members].sort((a, b) => ((k.joined || {})[a] || 0) - ((k.joined || {})[b] || 0));
+      k.leader = k.officers.length ? k.officers[0] : byAge[0];
+      k.officers = k.officers.filter((x) => x !== k.leader);
+      const nl = store.players.get(k.leader);
+      packSay(k, `${nl ? nl.tag : "Someone"} is the new Pack leader.`, true);
+    }
     store.touchPack(k);
     pushPack(k);
   }
 
+  // ------------------------------------------------- patches & factions --
+  function patchOf(k) {
+    return { tag: k.tag, name: k.name, colour: k.colour || 0, emblem: k.emblem || 0, mascot: k.mascot || 0,
+      country: k.country || "", faction: Number.isInteger(k.faction) ? k.faction : 0 };
+  }
+  function factionScores(w) {
+    const out = FACTIONS.map((name, i) => ({ faction: i, name, pp: 0, packs: 0, members: 0 }));
+    for (const k of store.packs.values()) {
+      const f = out[Number.isInteger(k.faction) ? k.faction : 0];
+      if (!f) continue;
+      f.packs += 1;
+      f.members += k.members.length;
+      if (k.week && k.week.id === w) f.pp += k.week.pp;
+    }
+    return out;
+  }
+  function smallestFaction() {
+    const sc = factionScores(weekId());
+    return sc.reduce((a, b) => (b.members < a.members ? b : a), sc[0]).faction;
+  }
+  function canApprove(k, p) {
+    return !!p && (k.leader === p.pid || (k.officers || []).includes(p.pid));
+  }
+  function pruneRequests(k) {
+    const now = Date.now();
+    const before = (k.requests || []).length;
+    k.requests = (k.requests || []).filter((r) => now - r.at < REQUEST_DAYS * DAY_MS);
+    if (k.requests.length !== before) store.touchPack(k);
+    return k.requests;
+  }
+  function memberDays(k, pid) {
+    const t = (k.joined || {})[pid] || k.created || Date.now();
+    return Math.floor((Date.now() - t) / DAY_MS);
+  }
+  function gifts(p) {
+    const d = dayId();
+    if (!p.gifts || p.gifts.day !== d) p.gifts = { day: d, bolts: 0, items: 0 };
+    return p.gifts;
+  }
+  function giftLeft(p, k) {
+    const g = gifts(p);
+    return { bolts: Math.max(0, GIFT_BOLTS_DAY - g.bolts), items: Math.max(0, GIFT_ITEMS_DAY - g.items),
+      ready: memberDays(k, p.pid) >= GIFT_MIN_DAYS, min_days: GIFT_MIN_DAYS };
+  }
+  function addMember(k, p) {
+    k.members.push(p.pid);
+    k.joined = k.joined || {};
+    k.joined[p.pid] = Date.now();
+    p.pack = k.id;
+    k.requests = (k.requests || []).filter((r) => r.pid !== p.pid);
+    packWeek(k);
+    store.touchPack(k);
+    store.touchPlayer(p);
+  }
+  function deliverInbox(c) {
+    const p = playerOf(c);
+    if (!p || !(p.inbox || []).length) return;
+    for (const g of p.inbox) send(c, { t: "gift", ...g });
+    p.inbox = [];
+    store.touchPlayer(p);
+  }
+
   const handlers = {
     me(c) {
+      deliverInbox(c);
       const pr = profile(c);
       send(c, { t: "me", profile: pr });
     },
@@ -357,7 +465,10 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
       const code = newPackCode();
       if (!code) return error(c, "busy", "Try again in a moment.");
       const id = crypto.randomBytes(6).toString("hex");
-      const k = { id, name, tag, colour: int(m.colour, 0, 7), emblem: int(m.emblem, 0, 7), code, leader: p.pid,
+      const k = { id, name, tag, colour: int(m.colour, 0, PACK_COLOURS - 1), emblem: int(m.emblem, 0, PACK_SHAPES - 1),
+        mascot: int(m.mascot, 0, PACK_SPECIES - 1), country: cleanCountry(m.country), faction: int(m.faction, 0, FACTIONS.length - 1),
+        factionSeason: seasonId(), factionSet: true, max: int(m.max, PACK_SIZE_MIN, PACK_SIZE_MAX) || PACK_MAX,
+        code, leader: p.pid, officers: [], requests: [], joined: { [p.pid]: Date.now() },
         members: [p.pid], created: Date.now(), chat: [] };
       packWeek(k);
       store.packs.set(id, k);
@@ -375,15 +486,130 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
       const k = [...store.packs.values()].find((x) => x.code === code);
       if (!k) return error(c, "no_pack", "No Pack with that code. Check it with your friend.");
       if (k.members.includes(p.pid)) return send(c, packView(k, p));
-      if (k.members.length >= PACK_MAX) return error(c, "pack_full", "That Pack is full.");
-      if (packOf(p)) leavePack(p);
-      k.members.push(p.pid);
-      p.pack = k.id;
-      packWeek(k);
+      if (k.members.length >= (k.max || PACK_MAX)) return error(c, "pack_full", "That Pack is full.");
+      pruneRequests(k);
+      if (!k.requests.some((r) => r.pid === p.pid)) {
+        if (k.requests.length >= 50) return error(c, "pack_busy", "That Pack has too many requests waiting. Try again later.");
+        k.requests.push({ pid: p.pid, tag: c.tag, species: c.species || 0, at: Date.now() });
+        store.touchPack(k);
+      }
+      send(c, { t: "pack_requested", tag: k.tag, name: k.name, days: REQUEST_DAYS });
+      pushPack(k);      // the leader and officers see the request
+    },
+
+    // Leader or officer: let a requester in (ok) or turn them down.
+    pack_approve(c, m) {
+      const p = needPlayer(c);
+      const k = packOf(p);
+      if (!k || !canApprove(k, p)) return;
+      const pid = String(m.pid || "");
+      const req = pruneRequests(k).find((r) => r.pid === pid);
+      if (!req) return send(c, packView(k, p));
+      const target = store.players.get(pid);
+      k.requests = k.requests.filter((r) => r.pid !== pid);
       store.touchPack(k);
-      store.touchPlayer(p);
-      packSay(k, `${c.tag} joined the Pack!`, true);
+      const tc = onlineByPid().get(pid);
+      if (!m.ok || !target) {
+        if (tc) send(tc, { t: "pack_declined", tag: k.tag, name: k.name });
+        return pushPack(k);
+      }
+      if (k.members.length >= (k.max || PACK_MAX)) return error(c, "pack_full", "Your Pack is full. Make it bigger first.");
+      if (packOf(target)) leavePack(target);
+      addMember(k, target);
+      packSay(k, `${target.tag} joined the Pack!`, true);
+      if (tc) send(tc, packView(k, target));
       pushPack(k);
+    },
+
+    // Leader: name or remove an officer (up to 3; they can approve requests).
+    pack_officer(c, m) {
+      const p = needPlayer(c);
+      const k = packOf(p);
+      const pid = String(m.pid || "");
+      if (!k || k.leader !== p.pid || pid === p.pid || !k.members.includes(pid)) return;
+      k.officers = (k.officers || []).filter((x) => x !== pid);
+      if (m.on) {
+        if (k.officers.length >= MAX_OFFICERS) return error(c, "officers", `A Pack can have ${MAX_OFFICERS} officers.`);
+        k.officers.push(pid);
+      }
+      store.touchPack(k);
+      const t = store.players.get(pid);
+      packSay(k, `${t ? t.tag : "?"} is ${m.on ? "now an officer" : "no longer an officer"}.`, true);
+      pushPack(k);
+    },
+
+    // Leader: patch (colour, shape, mascot, country), Pack size, faction (once a season).
+    pack_edit(c, m) {
+      const p = needPlayer(c);
+      const k = packOf(p);
+      if (!k || k.leader !== p.pid) return;
+      if (m.colour !== undefined) k.colour = int(m.colour, 0, PACK_COLOURS - 1);
+      if (m.emblem !== undefined) k.emblem = int(m.emblem, 0, PACK_SHAPES - 1);
+      if (m.mascot !== undefined) k.mascot = int(m.mascot, 0, PACK_SPECIES - 1);
+      if (m.country !== undefined) k.country = cleanCountry(m.country);
+      if (m.max !== undefined) {
+        const want = int(m.max, PACK_SIZE_MIN, PACK_SIZE_MAX);
+        if (want < k.members.length) return error(c, "pack_size", `Your Pack has ${k.members.length} members already.`);
+        k.max = want;
+      }
+      if (m.faction !== undefined) {
+        const f = int(m.faction, 0, FACTIONS.length - 1);
+        if (f !== k.faction) {
+          if (k.factionSet && k.factionSeason === seasonId())
+            return error(c, "faction_locked", "Your Pack can switch faction when the next season starts.");
+          k.faction = f;
+          k.factionSeason = seasonId();
+          k.factionSet = true;
+          packSay(k, `The Pack joined the ${FACTIONS[f]}!`, true);
+        }
+      }
+      store.touchPack(k);
+      pushPack(k);
+    },
+
+    // Send bolts and/or one special item to a Pack mate. The sender's game takes
+    // them out of its own save when it gets "gift_sent" back.
+    pack_gift(c, m) {
+      const p = needPlayer(c);
+      const k = packOf(p);
+      if (!k) return;
+      const pid = String(m.pid || "");
+      const target = store.players.get(pid);
+      if (!target || target.pack !== k.id || pid === p.pid) return error(c, "gift", "They aren't in your Pack.");
+      if (memberDays(k, p.pid) < GIFT_MIN_DAYS || memberDays(k, pid) < GIFT_MIN_DAYS)
+        return error(c, "gift_new", `Gifts work once you've both been in the Pack for ${GIFT_MIN_DAYS} days.`);
+      const g = gifts(p);
+      const bolts = int(m.bolts, 0, GIFT_BOLTS_DAY);
+      const item = typeof m.item === "string" && ITEM_ID_RE.test(m.item) ? m.item : "";
+      if (bolts === 0 && !item) return;
+      if (g.bolts + bolts > GIFT_BOLTS_DAY) return error(c, "gift_limit", `You can send ${GIFT_BOLTS_DAY - g.bolts} more bolts today.`);
+      if (item && g.items + 1 > GIFT_ITEMS_DAY) return error(c, "gift_limit", "You've sent today's item already.");
+      g.bolts += bolts;
+      if (item) g.items += 1;
+      store.touchPlayer(p);
+      const gift = { from: c.tag, bolts, item, at: Date.now() };
+      k.giftlog = (k.giftlog || []).concat([{ from: p.pid, to: pid, bolts, item, at: gift.at }]).slice(-100);
+      log(`gift [${k.tag}] ${c.tag} -> ${target.tag}: ${bolts} bolts ${item}`);
+      const tc = onlineByPid().get(pid);
+      if (tc) send(tc, { t: "gift", ...gift });
+      else {
+        target.inbox = (target.inbox || []).concat([gift]).slice(-20);
+        store.touchPlayer(target);
+      }
+      send(c, { t: "gift_sent", bolts, item, to: target.tag });
+      const what = [bolts ? `${bolts} bolts` : "", item ? "a special item" : ""].filter(Boolean).join(" and ");
+      packSay(k, `${c.tag} sent ${target.tag} ${what}`, true, "", true);
+    },
+
+    // Members of last week's winning faction collect their bonus once.
+    faction_claim(c) {
+      const p = needPlayer(c);
+      const k = packOf(p);
+      const fw = store.meta.factionWin;
+      if (!k || !fw || k.faction !== fw.faction || p.factionClaim === fw.week) return;
+      p.factionClaim = fw.week;
+      store.touchPlayer(p);
+      send(c, { t: "faction_reward", bolts: FACTION_WIN_BOLTS, faction: FACTIONS[fw.faction] });
     },
 
     pack_leave(c) {
@@ -440,9 +666,9 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
     },
   };
 
-  function packSay(k, text, system, from = "") {
+  function packSay(k, text, system, from = "", gift = false) {
     k.chat = k.chat || [];
-    const msg = { tag: from, text, system, at: Date.now() };
+    const msg = { tag: from, text, system, gift, at: Date.now() };
     k.chat.push(msg);
     if (k.chat.length > PACK_CHAT_KEEP) k.chat.shift();
     store.touchPack(k);
@@ -474,4 +700,4 @@ function createSocial({ store, clients, send, error, log, cleanText, cleanTag })
   return { identify, playerOf, profile, badge, awardMatch, handlers, turf, packRoomFor, canJoinPackRoom, packTagOf, RANKS };
 }
 
-module.exports = { createSocial, RANKS, weekId, seasonId };
+module.exports = { createSocial, RANKS, weekId, seasonId, FACTIONS };

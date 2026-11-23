@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "build": "echo build",
-    "start": "node lobby_server.js"
+    "start": "node lobby_server.js",
+    "dev": "node lobby_server.js"
   },
   "engines": {
     "node": ">=18"

@@ -16,7 +16,7 @@ const KEYS = {
   "slots.p_star": [0, 10000, "int"], "slots.p_seven": [0, 10000, "int"], "slots.jackpot": [0, 10000, "int"],
   "vend.on": [0, 1, "int"], "vend.price": [0, 10000, "int"], "vend.protect": [0, 30, "num"], "vend.head_start": [0, 10, "num"],
   "bolts.multiplier": [1, 5, "int"], "bolts.played": [0, 1000, "int"], "bolts.won": [0, 1000, "int"],
-  "bolts.finale": [0, 1000, "int"], "bolts.challenge": [0, 1000, "int"],
+  "bolts.finale": [0, 1000, "int"], "bolts.challenge": [0, 1000, "int"], "bolts.bonus": [0, 1000, "int"], "bolts.bonus_price": [0, 5000, "int"],
   "tokens.value": [1, 100, "int"], "tokens.cap": [0, 1000, "int"], "tokens.cap_free": [0, 2000, "int"],
 };
 
