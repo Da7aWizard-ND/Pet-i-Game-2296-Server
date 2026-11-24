@@ -21,17 +21,18 @@ Leave the terminal open while you play; close it (or Ctrl+C) to stop.
 ## Putting it on the internet
 
 Use `setup_server.sh` on a fresh **Ubuntu 24.04** server (Oracle Cloud Always
-Free in Johannesburg, or a cheap Johannesburg VPS). It contains the whole
-lobby server, so it's the only file you upload:
+Free in Johannesburg, or a cheap Johannesburg VPS). Upload the setup script
+and the website files:
 
-    scp -i <key> setup_server.sh ubuntu@<server-ip>:~
+    scp -r -i <key> setup_server.sh website ubuntu@<server-ip>:~
     ssh -i <key> ubuntu@<server-ip> "bash setup_server.sh <duckdns-name>"
 
 It installs Node.js and Caddy, keeps the server running (systemd service
 `peti-lobby`), opens ports 80/443, and gets a free certificate, so the game
-connects to `wss://<duckdns-name>.duckdns.org`. Run it again (with a newer
-copy) to update the server. The cloud provider's own firewall must also allow
-TCP 80 and 443 in.
+connects to `wss://<duckdns-name>.duckdns.org`. The same address serves the
+website at `/`. Run it again (with a newer script and website files) to update
+the server. The cloud provider's own firewall must also allow TCP 80 and 443
+in.
 
 Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 (`SERVER_URL`). The web build on an https page can only connect to `wss://`.

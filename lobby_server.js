@@ -33,6 +33,23 @@ const MAX_CLIENTS = 1000;
 const CHAT_MAX = 80;             // characters per message
 const CHAT_HISTORY = 30;         // messages kept per room (new joiners see these; reports include them)
 const RELAY_MAX_BYTES = 16 * 1024;
+const SITE_DIR = fs.existsSync(path.join(__dirname, "site"))
+  ? path.join(__dirname, "site")
+  : fs.existsSync(path.join(__dirname, "website"))
+    ? path.join(__dirname, "website")
+    : fs.existsSync(path.join(__dirname, "index.html"))
+      ? __dirname
+      : path.resolve(__dirname, "..", "website");
+const CONTENT_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+};
 const CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I or O (they look like 1 and 0)
 const REPORT_FILE = path.join(__dirname, "reports.log");
 
@@ -410,8 +427,46 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ values: config ? config.current() : {}, updated: config ? config.updated() : "" }));
     return;
   }
-  res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-  res.end(`i-Pet Cyber Store 2096 lobby OK · ${clients.size} online · ${rooms.size} rooms · ${store.players.size} players · ${store.packs.size} packs (${store.kind})\n`);
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.writeHead(405, { allow: "GET, HEAD" });
+    res.end();
+    return;
+  }
+  let pathname;
+  try {
+    pathname = decodeURIComponent(new URL(req.url || "/", "http://localhost").pathname);
+  } catch {
+    res.writeHead(400);
+    res.end("Bad request");
+    return;
+  }
+  if (pathname === "/") pathname = "/index.html";
+  const file = path.resolve(SITE_DIR, `.${pathname}`);
+  const relative = path.relative(SITE_DIR, file);
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    res.writeHead(403);
+    res.end("Forbidden");
+    return;
+  }
+  fs.stat(file, (err, stat) => {
+    if (err || !stat.isFile()) {
+      res.writeHead(404);
+      res.end("Not found");
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": CONTENT_TYPES[path.extname(file).toLowerCase()] || "application/octet-stream",
+      "content-length": stat.size,
+      "cache-control": "no-cache",
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    const stream = fs.createReadStream(file);
+    stream.on("error", () => res.destroy());
+    stream.pipe(res);
+  });
 });
 
 const wss = new WebSocketServer({ server, maxPayload: 64 * 1024 });

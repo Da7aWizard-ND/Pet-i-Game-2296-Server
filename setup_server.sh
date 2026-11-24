@@ -5,13 +5,13 @@
 #   bash setup_server.sh <duckdns-name>
 #
 # e.g. "bash setup_server.sh ipet2096" for ipet2096.duckdns.org.
-# It installs Node.js and Caddy, puts the lobby server in /opt/peti-lobby,
+# It installs Node.js and Caddy, puts the lobby server and website in /opt/peti-lobby,
 # keeps it running (and restarts it after a reboot or crash), opens ports
 # 80/443, and gets a free security certificate so the game can connect with
 # wss://<name>.duckdns.org (the web/phone version needs that).
 #
 # Safe to run again: that's also how you update the server to a new version
-# (upload the new setup_server.sh and run it).
+# (upload the new setup_server.sh and website files, then run it).
 set -euo pipefail
 
 NAME="${1:-}"
@@ -23,6 +23,17 @@ DOMAIN="$NAME"
 [[ "$DOMAIN" == *.* ]] || DOMAIN="$NAME.duckdns.org"
 SUDO=""
 [[ $EUID -ne 0 ]] && SUDO="sudo"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/website/index.html" && -d "$SCRIPT_DIR/website/img" ]]; then
+  SITE_SOURCE="$SCRIPT_DIR/website"
+  SITE_MODE="folder"
+elif [[ -f "$SCRIPT_DIR/index.html" && -d "$SCRIPT_DIR/img" ]]; then
+  SITE_SOURCE="$SCRIPT_DIR"
+  SITE_MODE="flat"
+else
+  echo "Website files not found. Upload website/ or index.html and img/ beside setup_server.sh."
+  exit 1
+fi
 
 echo "==> i-Pet lobby server for $DOMAIN"
 
@@ -53,7 +64,7 @@ $SUDO tee /opt/peti-lobby/lobby_server.js >/dev/null <<'PETI_EOF'
 //
 // Run:   npm install   then   node lobby_server.js
 // Port:  PORT environment variable (free hosts set this), default 8080.
-// Health check: GET / returns "i-Pet Cyber Store 2096 lobby OK".
+// Website: GET / serves the i-Pet Cyber Store website.
 
 "use strict";
 const http = require("http");
@@ -70,6 +81,23 @@ const MAX_CLIENTS = 1000;
 const CHAT_MAX = 80;             // characters per message
 const CHAT_HISTORY = 30;         // messages kept per room (new joiners see these; reports include them)
 const RELAY_MAX_BYTES = 16 * 1024;
+const SITE_DIR = fs.existsSync(path.join(__dirname, "site"))
+  ? path.join(__dirname, "site")
+  : fs.existsSync(path.join(__dirname, "website"))
+    ? path.join(__dirname, "website")
+    : fs.existsSync(path.join(__dirname, "index.html"))
+      ? __dirname
+      : path.resolve(__dirname, "..", "website");
+const CONTENT_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+};
 const CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I or O (they look like 1 and 0)
 const REPORT_FILE = path.join(__dirname, "reports.log");
 
@@ -416,8 +444,46 @@ function applySettings(room, s) {
 // ------------------------------------------------------------------ server --
 
 const server = http.createServer((req, res) => {
-  res.writeHead(200, { "content-type": "text/plain" });
-  res.end(`i-Pet Cyber Store 2096 lobby OK · ${clients.size} online · ${rooms.size} rooms\n`);
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.writeHead(405, { allow: "GET, HEAD" });
+    res.end();
+    return;
+  }
+  let pathname;
+  try {
+    pathname = decodeURIComponent(new URL(req.url || "/", "http://localhost").pathname);
+  } catch {
+    res.writeHead(400);
+    res.end("Bad request");
+    return;
+  }
+  if (pathname === "/") pathname = "/index.html";
+  const file = path.resolve(SITE_DIR, `.${pathname}`);
+  const relative = path.relative(SITE_DIR, file);
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    res.writeHead(403);
+    res.end("Forbidden");
+    return;
+  }
+  fs.stat(file, (err, stat) => {
+    if (err || !stat.isFile()) {
+      res.writeHead(404);
+      res.end("Not found");
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": CONTENT_TYPES[path.extname(file).toLowerCase()] || "application/octet-stream",
+      "content-length": stat.size,
+      "cache-control": "no-cache",
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    const stream = fs.createReadStream(file);
+    stream.on("error", () => res.destroy());
+    stream.pipe(res);
+  });
 });
 
 const wss = new WebSocketServer({ server, maxPayload: 64 * 1024 });
@@ -582,6 +648,13 @@ $SUDO tee /opt/peti-lobby/package.json >/dev/null <<'PETI_EOF'
 PETI_EOF
 id -u peti >/dev/null 2>&1 || $SUDO useradd --system --home /opt/peti-lobby --shell /usr/sbin/nologin peti
 (cd /opt/peti-lobby && $SUDO npm install --omit=dev --no-audit --no-fund -q)
+echo "==> Installing website files"
+$SUDO mkdir -p /opt/peti-lobby/site
+if [[ "$SITE_MODE" == "folder" ]]; then
+  $SUDO cp -a "$SITE_SOURCE"/. /opt/peti-lobby/site/
+else
+  $SUDO cp -a "$SITE_SOURCE/index.html" "$SITE_SOURCE/img" /opt/peti-lobby/site/
+fi
 $SUDO chown -R peti:peti /opt/peti-lobby
 
 echo "==> Keeping it running (systemd service 'peti-lobby')"
@@ -635,7 +708,7 @@ else
   echo "!!  Lobby server isn't answering. Logs: sudo journalctl -u peti-lobby -n 50"
 fi
 echo "    Getting the certificate can take a minute. Then open https://$DOMAIN in a browser:"
-echo "    it should say 'i-Pet Cyber Store 2096 lobby OK'."
+echo "    it should show the i-Pet Cyber Store 2096 website."
 echo
 echo "Done. The game's server address is:  wss://$DOMAIN"
 echo "Useful later:  sudo systemctl restart peti-lobby   ·   sudo journalctl -u peti-lobby -f   ·   cat /opt/peti-lobby/reports.log"
