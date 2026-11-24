@@ -21,27 +21,66 @@ Leave the terminal open while you play; close it (or Ctrl+C) to stop.
 ## Putting it on the internet
 
 Use `setup_server.sh` on a fresh **Ubuntu 24.04** server (Oracle Cloud Always
-Free in Johannesburg, or a cheap Johannesburg VPS). Upload the setup script
-and the website files:
+Free in Johannesburg, or a cheap Johannesburg VPS). Upload the complete
+deployment folder so the setup script has every server module and the website:
 
-    scp -r -i <key> setup_server.sh website ubuntu@<server-ip>:~
-    ssh -i <key> ubuntu@<server-ip> "bash setup_server.sh <duckdns-name>"
+    scp -r -i <key> "server/Pet-i Game 2296 Server" ubuntu@<server-ip>:~
+    ssh -i <key> ubuntu@<server-ip> 'cd "Pet-i Game 2296 Server" && bash setup_server.sh <duckdns-name>'
 
 It installs Node.js and Caddy, keeps the server running (systemd service
 `peti-lobby`), opens ports 80/443, and gets a free certificate, so the game
 connects to `wss://<duckdns-name>.duckdns.org`. The same address serves the
-website at `/`. Run it again (with a newer script and website files) to update
-the server. The cloud provider's own firewall must also allow TCP 80 and 443
-in. The website's live lobby badge reads the online player count from `/status`.
+website at `/`. Run it again (with a newer script and website folder) to
+update the server. The cloud provider's own firewall must also allow TCP 80
+and 443 in.
+The website's live lobby badge reads the online player count from `/status`.
 
 Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 (`SERVER_URL`). The web build on an https page can only connect to `wss://`.
 
+## Email accounts and profile sync
+
+The in-game Account page links a verified email/password account to the
+profile already on that device. A six-digit verification code is emailed and
+expires after 15 minutes. After verification, the account receives 250 bolts
+once. Registered gameplay progress—including bolts, wardrobe, special items,
+challenges, badges and stats—is stored on the server and synced when online.
+Device preferences remain local.
+
+Email delivery is intentionally disabled until the server operator configures
+an SMTP service. After deployment, create `/etc/peti-lobby.env` on the server:
+
+    sudo nano /etc/peti-lobby.env
+
+Set these values (use your SMTP provider's host and credentials; do not put
+real credentials in the repository):
+
+    ACCOUNT_SECRET=<at-least-32-random-characters>
+    SMTP_HOST=<smtp-host>
+    SMTP_PORT=587
+    SMTP_USER=<smtp-username>
+    SMTP_PASS=<smtp-password-or-app-password>
+    SMTP_FROM=<verified-sender-address>
+
+Generate a strong account secret with `openssl rand -hex 32`. Then restrict
+the file and restart the service:
+
+    sudo chown root:root /etc/peti-lobby.env
+    sudo chmod 600 /etc/peti-lobby.env
+    sudo systemctl restart peti-lobby
+
+The service reads this optional environment file. Account registration and
+sign-in require a secure `wss://` connection outside localhost. If SMTP or the
+account secret is missing, registration reports that configuration error
+instead of claiming that a verification email was sent.
+
 ## Files
 
-- `setup_server.sh`: one-step install/update for an Ubuntu server (regenerate
-  it whenever `lobby_server.js` or `filter.js` change; it embeds them).
-- `lobby_server.js`: the server.
+- `setup_server.sh`: installs the bundled server modules and website on Ubuntu.
+- `lobby_server.js`: WebSocket lobby, game relay and HTTP site server.
+- `accounts.js`: email verification, password authentication and profile sync.
+- `store.js`: persistent MySQL or JSON-file storage.
+- `social.js`, `codes.js`, `config.js`: online profile, gift-code and live-config handlers.
 - `filter.js`: chat/tag word filter and contact-info blocker. Add words to
   `BLOCKED` (lower case).
 - `reports.log`: created when someone presses Report; each line has who

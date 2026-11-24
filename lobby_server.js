@@ -19,13 +19,15 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
+const nodemailer = require("nodemailer");
 const { cleanText, cleanTag } = require("./filter");
 const { Store } = require("./store");
 const { createSocial } = require("./social");
 const { createCodes } = require("./codes");
 const { createConfig } = require("./config");
+const { createAccounts } = require("./accounts");
 
-const PROTOCOL = 1;              // bump when the message format changes (old games get "please update")
+const PROTOCOL = 2;              // bump when the message format changes (old games get "please update")
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const MAX_PLAYERS = 8;           // humans per room (computer pets fill the rest)
 const MAX_ROOMS = 200;
@@ -37,9 +39,7 @@ const SITE_DIR = fs.existsSync(path.join(__dirname, "site"))
   ? path.join(__dirname, "site")
   : fs.existsSync(path.join(__dirname, "website"))
     ? path.join(__dirname, "website")
-    : fs.existsSync(path.join(__dirname, "index.html"))
-      ? __dirname
-      : path.resolve(__dirname, "..", "website");
+    : path.resolve(__dirname, "..", "website");
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -84,6 +84,7 @@ function log(...a) {
 const store = new Store(log);
 let social = null;
 let config = null;
+let accounts = null;
 
 // ------------------------------------------------------------------ helpers --
 
@@ -221,8 +222,11 @@ const handlers = {
     c.hat = typeof m.hat === "string" ? m.hat.replace(/[^a-z]/g, "").slice(0, 20) : "";
     c.hello = true;
     social.identify(c, m.key);
+    c.localPid = c.pid;
+    const account = accounts ? accounts.restoreSession(c, m.account_token) : null;
     send(c, { t: "welcome", id: c.id, tag: c.tag, protocol: PROTOCOL, max_players: MAX_PLAYERS, quick_count: QUICK_CHAT_COUNT,
-      profile: social.profile(c), cfg: config.current(), cfg_updated: config.updated() });
+      profile: social.profile(c), cfg: config.current(), cfg_updated: config.updated(),
+      account: account ? { email: account.email } : null, account_profile: account ? account.profile : null });
   },
 
   create(c, m) {
@@ -483,7 +487,11 @@ wss.on("connection", (ws, req) => {
     return;
   }
   const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
-  const c = { id: nextId++, ws, ip, tag: null, species: 0, ready: false, room: null, hello: false, chatTimes: [], mutedUntil: 0, alive: true, msgCount: 0, msgWindow: Date.now() };
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
+  const remoteAddress = req.socket.remoteAddress || "";
+  const loopback = remoteAddress === "::1" || remoteAddress === "127.0.0.1" || remoteAddress === "::ffff:127.0.0.1";
+  const secure = !!req.socket.encrypted || forwardedProto === "https" || loopback;
+  const c = { id: nextId++, ws, ip, secure, tag: null, species: 0, ready: false, room: null, hello: false, chatTimes: [], mutedUntil: 0, alive: true, msgCount: 0, msgWindow: Date.now() };
   clients.set(c.id, c);
 
   ws.on("pong", () => (c.alive = true));
@@ -505,7 +513,13 @@ wss.on("connection", (ws, req) => {
     if (!m || typeof m.t !== "string" || !handlers[m.t]) return;
     if (!c.hello && m.t !== "hello" && m.t !== "ping") return error(c, "hello_first", "Say hello first.");
     try {
-      handlers[m.t](c, m, raw);
+      const result = handlers[m.t](c, m, raw);
+      if (result && typeof result.then === "function") {
+        result.catch((e) => {
+          log("async handler error", m.t, e && e.message ? e.message : "unknown_error");
+          error(c, "server_error", "The request could not be completed. Please try again.");
+        });
+      }
     } catch (e) {
       log("handler error", m.t, e);
     }
@@ -538,6 +552,27 @@ async function main() {
   Object.assign(handlers, createCodes({ store, send, error, log, playerOf: social.playerOf }).handlers);
   config = createConfig({ store, clients, send, error, log });
   Object.assign(handlers, config.handlers);
+  const smtpHost = process.env.SMTP_HOST || "";
+  const smtpUser = process.env.SMTP_USER || "";
+  const smtpPass = process.env.SMTP_PASS || "";
+  const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
+  const mailFrom = process.env.SMTP_FROM || "";
+  const mailer = smtpHost && mailFrom && Number.isInteger(smtpPort) && smtpPort > 0 && smtpPort < 65536
+    && (!!smtpUser === !!smtpPass)
+    ? nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        requireTLS: smtpPort !== 465,
+        ...(smtpUser ? { auth: { user: smtpUser, pass: smtpPass } } : {}),
+        tls: { minVersion: "TLSv1.2" },
+      })
+    : null;
+  accounts = createAccounts({
+    store, send, error, log, mailer, mailFrom,
+    secret: process.env.ACCOUNT_SECRET || "",
+  });
+  Object.assign(handlers, accounts.handlers);
   server.listen(PORT, () => log(`i-Pet Cyber Store 2096 lobby listening on port ${PORT}`));
 }
 
