@@ -47,6 +47,14 @@ once. Registered gameplay progress—including bolts, wardrobe, special items,
 challenges, badges and stats—is stored on the server and synced when online.
 Device preferences remain local.
 
+The website's **Sign in** button uses the same verified email and password.
+Players can view their saved profile there, choose **Remember me on this
+device** for a 30-day protected session, or request a six-digit email
+password-reset code. Without that option, the site uses a browser-session
+cookie and the server expires the session after 12 hours. The site never
+saves the password. Password reset and account verification both require the
+SMTP configuration below.
+
 Email delivery is intentionally disabled until the server operator configures
 an SMTP service. After deployment, create `/etc/peti-lobby.env` on the server:
 

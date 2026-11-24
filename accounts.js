@@ -6,6 +6,8 @@ const { promisify } = require("util");
 const scrypt = promisify(crypto.scrypt);
 const DUMMY_PASSWORD_HASH = hashPassword(crypto.randomBytes(24).toString("hex"));
 const EMAIL_CODE_TTL = 15 * 60 * 1000;
+const SESSION_TTL = 30 * 24 * 60 * 60 * 1000;
+const SESSION_ONLY_TTL = 12 * 60 * 60 * 1000;
 const PROFILE_MAX_BYTES = 32 * 1024;
 const BONUS_BOLTS = 250;
 const PROFILE_KEYS = new Set([
@@ -82,7 +84,10 @@ async function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(actual, expected);
 }
 
-function createAccounts({ store, send, error, log = console.log, mailer = null, mailFrom = "", secret = "" }) {
+function createAccounts({
+  store, send, error, log = console.log, mailer = null, mailFrom = "", secret = "",
+  onPasswordReset = () => {},
+}) {
   const sessionIndex = new Map();
   const limits = new Map();
   for (const [key, account] of store.accounts) {
@@ -123,11 +128,12 @@ function createAccounts({ store, send, error, log = console.log, mailer = null, 
     return null;
   }
 
-  function makeSession(c, account, key) {
+  function makeSession(c, account, key, ttl = 0) {
     const token = crypto.randomBytes(32).toString("hex");
     const hash = crypto.createHash("sha256").update(token).digest("hex");
+    const expiresAt = ttl > 0 ? Date.now() + ttl : 0;
     account.sessions = (account.sessions || []).filter((item) => item.hash !== hash);
-    account.sessions.push({ hash, createdAt: Date.now() });
+    account.sessions.push({ hash, createdAt: Date.now(), expiresAt });
     while (account.sessions.length > 8) {
       const expired = account.sessions.shift();
       sessionIndex.delete(expired.hash);
@@ -136,20 +142,156 @@ function createAccounts({ store, send, error, log = console.log, mailer = null, 
     c.account = key;
     c.accountToken = token;
     c.pid = account.pid;
+    c.accountExpiresAt = expiresAt;
     store.touchAccount(account);
     return token;
   }
 
-  function restoreSession(c, token) {
-    if (!c.secure || typeof token !== "string" || !/^[a-f0-9]{64}$/i.test(token)) return null;
+  function accountForSession(token, secure) {
+    if (!secure || typeof token !== "string" || !/^[a-f0-9]{64}$/i.test(token)) return null;
     const hash = crypto.createHash("sha256").update(token).digest("hex");
     const key = sessionIndex.get(hash);
     const account = key ? store.accounts.get(key) : null;
-    if (!account || !account.verifiedAt || !(account.sessions || []).some((session) => session.hash === hash)) return null;
-    c.account = key;
+    const session = account && (account.sessions || []).find((item) => item.hash === hash);
+    if (!account || !account.verifiedAt || !session) {
+      sessionIndex.delete(hash);
+      return null;
+    }
+    if (session.expiresAt && session.expiresAt <= Date.now()) {
+      account.sessions = account.sessions.filter((item) => item.hash !== hash);
+      sessionIndex.delete(hash);
+      store.touchAccount(account);
+      return null;
+    }
+    return { key, email: account.email, pid: account.pid, profile: account.profile };
+  }
+
+  function restoreSession(c, token) {
+    const session = accountForSession(token, c.secure);
+    if (!session) return null;
+    c.account = session.key;
     c.accountToken = token;
-    c.pid = account.pid;
-    return { email: account.email, profile: account.profile };
+    c.pid = session.pid;
+    return { email: session.email, profile: session.profile };
+  }
+
+  async function authenticate(emailValue, passwordValue, { secure, ip, client = null, remember = null } = {}) {
+    if (!secure) {
+      return { ok: false, code: "account_secure", message: "Account actions need a secure connection." };
+    }
+    const email = normalizeEmail(emailValue);
+    const password = typeof passwordValue === "string" ? passwordValue : "";
+    const key = email ? emailKey(email) : "";
+    if (!limited(`login-ip:${ip}`, 12, 15 * 60 * 1000)
+      || !limited(`login-email:${key}`, 8, 15 * 60 * 1000)) {
+      return { ok: false, code: "account_rate", message: "Too many sign-in attempts. Please wait before trying again." };
+    }
+    const account = key ? store.accounts.get(key) : null;
+    const storedHash = account && account.verifiedAt
+      ? account.passwordHash
+      : await DUMMY_PASSWORD_HASH;
+    const matches = password.length <= 128 && await verifyPassword(password, storedHash);
+    if (!matches) {
+      return { ok: false, code: "account_login", message: "Email or password is incorrect, or the email is not verified." };
+    }
+    const sessionClient = client || {};
+    const ttl = remember === null ? 0 : remember ? SESSION_TTL : SESSION_ONLY_TTL;
+    const token = makeSession(sessionClient, account, key, ttl);
+    if (!await store.flush()) {
+      return { ok: false, code: "account_storage", message: "Your sign-in could not be saved. Please try again." };
+    }
+    return { ok: true, email, token, expiresAt: sessionClient.accountExpiresAt, profile: account.profile };
+  }
+
+  async function revokeSession(token, secure) {
+    if (!secure || typeof token !== "string" || !/^[a-f0-9]{64}$/i.test(token)) return true;
+    const hash = crypto.createHash("sha256").update(token).digest("hex");
+    const key = sessionIndex.get(hash);
+    const account = key ? store.accounts.get(key) : null;
+    if (!account || !(account.sessions || []).some((session) => session.hash === hash)) {
+      sessionIndex.delete(hash);
+      return true;
+    }
+    account.sessions = account.sessions.filter((session) => session.hash !== hash);
+    sessionIndex.delete(hash);
+    store.touchAccount(account);
+    return store.flush();
+  }
+
+  async function requestPasswordReset(emailValue, { secure, ip } = {}) {
+    if (!secure) return { ok: false, code: "account_secure" };
+    if (!mailer || typeof mailer.sendMail !== "function" || secret.length < 32) {
+      return { ok: false, code: "account_unconfigured" };
+    }
+    const email = normalizeEmail(emailValue);
+    const key = email ? emailKey(email) : "";
+    if (!limited(`reset-ip:${ip}`, 5, 60 * 60 * 1000)
+      || !limited(`reset-email:${key || "invalid"}`, 3, 60 * 60 * 1000)) {
+      return { ok: false, code: "account_rate" };
+    }
+    const account = key ? store.accounts.get(key) : null;
+    if (!account || !account.verifiedAt) return { ok: true };
+
+    const code = String(crypto.randomInt(100000, 1000000));
+    account.codeHash = codeHash(email, code);
+    account.codeExpiresAt = Date.now() + EMAIL_CODE_TTL;
+    account.verifyAttempts = 0;
+    store.touchAccount(account);
+    if (!await store.flush()) return { ok: false, code: "account_storage" };
+    try {
+      await mailer.sendMail({
+        from: mailFrom,
+        to: email,
+        subject: "Reset your i-Pet account password",
+        text: `Your i-Pet Cyber Store 2096 password reset code is ${code}.\n\nIt expires in 15 minutes. If you did not request this, you can ignore this email.`,
+      });
+    } catch (e) {
+      log("password reset email delivery failed:", e && e.code ? e.code : "smtp_error");
+      return { ok: false, code: "email_failed" };
+    }
+    return { ok: true };
+  }
+
+  async function resetPassword(emailValue, codeValue, passwordValue, { secure, ip } = {}) {
+    if (!secure) return { ok: false, code: "account_secure" };
+    const email = normalizeEmail(emailValue);
+    const code = typeof codeValue === "string" ? codeValue.trim() : "";
+    const password = typeof passwordValue === "string" ? passwordValue : "";
+    if (!email || !/^\d{6}$/.test(code) || password.length < 10 || password.length > 128) {
+      return { ok: false, code: "account_reset_input" };
+    }
+    const key = emailKey(email);
+    if (!limited(`reset-confirm-ip:${ip}`, 10, 30 * 60 * 1000)
+      || !limited(`reset-confirm-email:${key}`, 8, 30 * 60 * 1000)) {
+      return { ok: false, code: "account_rate" };
+    }
+    const account = store.accounts.get(key);
+    const expected = Buffer.from(account && account.verifiedAt && account.codeHash
+      ? account.codeHash
+      : codeHash(email, "000000"), "hex");
+    const actual = Buffer.from(codeHash(email, code), "hex");
+    const matches = expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+    if (!account || !account.verifiedAt || !matches || account.codeExpiresAt <= Date.now()
+      || (account.verifyAttempts || 0) >= 8) {
+      if (account && account.verifiedAt) {
+        account.verifyAttempts = (account.verifyAttempts || 0) + 1;
+        store.touchAccount(account);
+        if (!await store.flush()) return { ok: false, code: "account_storage" };
+      }
+      return { ok: false, code: "account_reset_invalid" };
+    }
+
+    const passwordHashValue = await hashPassword(password);
+    account.passwordHash = passwordHashValue;
+    account.codeHash = "";
+    account.codeExpiresAt = 0;
+    account.verifyAttempts = 0;
+    for (const session of account.sessions || []) sessionIndex.delete(session.hash);
+    account.sessions = [];
+    store.touchAccount(account);
+    onPasswordReset(key);
+    if (!await store.flush()) return { ok: false, code: "account_storage" };
+    return { ok: true };
   }
 
   async function sendVerification(c, account) {
@@ -274,22 +416,9 @@ function createAccounts({ store, send, error, log = console.log, mailer = null, 
   async function login(c, m) {
     if (!canUseAccount(c)) return;
     if (c.account) return error(c, "account_signed_in", "You are already signed in.");
-    const email = normalizeEmail(m.email);
-    const password = typeof m.password === "string" ? m.password : "";
-    const key = email ? emailKey(email) : "";
-    if (!limited(`login-ip:${c.ip}`, 12, 15 * 60 * 1000)
-      || !limited(`login-email:${key}`, 8, 15 * 60 * 1000)) {
-      return error(c, "account_rate", "Too many sign-in attempts. Please wait before trying again.");
-    }
-    const account = key ? store.accounts.get(key) : null;
-    const storedHash = account && account.verifiedAt
-      ? account.passwordHash
-      : await DUMMY_PASSWORD_HASH;
-    const matches = password.length <= 128 && await verifyPassword(password, storedHash);
-    if (!matches) return error(c, "account_login", "Email or password is incorrect, or the email is not verified.");
-    const token = makeSession(c, account, key);
-    if (!await store.flush()) return error(c, "account_storage", "Your sign-in could not be saved. Please try again.");
-    send(c, { t: "account", event: "signed_in", email, token, profile: account.profile });
+    const result = await authenticate(m.email, m.password, { secure: c.secure, ip: c.ip, client: c });
+    if (!result.ok) return error(c, result.code, result.message);
+    send(c, { t: "account", event: "signed_in", email: result.email, token: result.token, profile: result.profile });
   }
 
   async function sync(c, m) {
@@ -334,7 +463,10 @@ function createAccounts({ store, send, error, log = console.log, mailer = null, 
     account_logout: logout,
   };
 
-  return { handlers, restoreSession };
+  return {
+    handlers, restoreSession, authenticate, accountForSession, revokeSession,
+    requestPasswordReset, resetPassword,
+  };
 }
 
 module.exports = { createAccounts, cleanProfile, normalizeEmail, hashPassword, verifyPassword, BONUS_BOLTS };

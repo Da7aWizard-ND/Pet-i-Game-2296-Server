@@ -56,6 +56,9 @@ const REPORT_FILE = path.join(__dirname, "reports.log");
 // Quick-chat phrases. The game has the same list (net.gd QUICK_CHAT) and
 // shows them as buttons; only the number travels over the wire.
 const QUICK_CHAT_COUNT = 12;
+const ACCOUNT_COOKIE = "peti_session";
+const ACCOUNT_BODY_LIMIT = 8 * 1024;
+const ACCOUNT_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 // Match settings the host may change, with what's allowed.
 const SETTING_RULES = {
@@ -78,6 +81,200 @@ const rooms = new Map();     // code -> room
 
 function log(...a) {
   console.log(new Date().toISOString(), ...a);
+}
+
+function jsonResponse(res, status, value, headers = {}) {
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    ...headers,
+  });
+  res.end(value === null ? "" : JSON.stringify(value));
+}
+
+function requestIsHttps(req) {
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
+  return !!req.socket.encrypted || forwardedProto === "https";
+}
+
+function requestIsSecure(req) {
+  const remoteAddress = req.socket.remoteAddress || "";
+  const loopback = remoteAddress === "::1" || remoteAddress === "127.0.0.1"
+    || remoteAddress === "::ffff:127.0.0.1" || remoteAddress.startsWith("::ffff:127.");
+  return requestIsHttps(req) || loopback;
+}
+
+function requestIp(req) {
+  return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+}
+
+function sameOriginRequest(req) {
+  const origin = req.headers.origin;
+  if (typeof origin !== "string" || !req.headers.host) return false;
+  try {
+    const parsed = new URL(origin);
+    return parsed.host.toLowerCase() === String(req.headers.host).toLowerCase()
+      && parsed.protocol === (requestIsHttps(req) ? "https:" : "http:");
+  } catch {
+    return false;
+  }
+}
+
+function cookieValue(req, name) {
+  for (const part of String(req.headers.cookie || "").split(";")) {
+    const equals = part.indexOf("=");
+    if (equals > 0 && part.slice(0, equals).trim() === name) return part.slice(equals + 1).trim();
+  }
+  return "";
+}
+
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    const contentType = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+    if (contentType !== "application/json") {
+      reject(Object.assign(new Error("content_type"), { statusCode: 415 }));
+      req.resume();
+      return;
+    }
+    let size = 0;
+    let tooLarge = false;
+    const chunks = [];
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > ACCOUNT_BODY_LIMIT) {
+        tooLarge = true;
+        chunks.length = 0;
+      } else if (!tooLarge) {
+        chunks.push(chunk);
+      }
+    });
+    req.on("end", () => {
+      if (tooLarge) {
+        reject(Object.assign(new Error("payload_too_large"), { statusCode: 413 }));
+        return;
+      }
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("invalid_json");
+        resolve(body);
+      } catch {
+        reject(Object.assign(new Error("invalid_json"), { statusCode: 400 }));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+function accountApiError(res, status, message) {
+  jsonResponse(res, status, { error: message });
+}
+
+async function handleAccountApi(req, res, pathname) {
+  if (!accounts) return accountApiError(res, 503, "Account service is unavailable.");
+  const secure = requestIsSecure(req);
+  const https = requestIsHttps(req);
+  const token = cookieValue(req, ACCOUNT_COOKIE);
+
+  if (pathname === "/api/me") {
+    if (req.method !== "GET") {
+      res.writeHead(405, { allow: "GET", "cache-control": "no-store" });
+      res.end();
+      return;
+    }
+    const session = accounts.accountForSession(token, secure);
+    if (!session) return jsonResponse(res, 401, { authenticated: false });
+    const player = store.players.get(session.pid) || {};
+    return jsonResponse(res, 200, {
+      authenticated: true,
+      email: session.email,
+      profile: session.profile,
+      player: {
+        tag: typeof player.tag === "string" ? player.tag : "",
+        species: Number.isInteger(player.species) ? player.species : 0,
+        hat: typeof player.hat === "string" ? player.hat : "",
+      },
+      online: social ? social.profile({ pid: session.pid }) : null,
+    });
+  }
+
+  if (!["/api/login", "/api/logout", "/api/password-reset/request", "/api/password-reset/confirm"].includes(pathname)) {
+    return accountApiError(res, 404, "Not found.");
+  }
+  if (req.method !== "POST") {
+    res.writeHead(405, {
+      allow: "POST",
+      "cache-control": "no-store",
+    });
+    res.end();
+    return;
+  }
+  if (!sameOriginRequest(req)) return accountApiError(res, 403, "This request could not be verified.");
+
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (e) {
+    return accountApiError(res, e.statusCode || 400,
+      e.statusCode === 413 ? "Request is too large." : "Send a valid JSON request.");
+  }
+
+  if (pathname === "/api/login") {
+    const result = await accounts.authenticate(body.email, body.password, {
+      secure, ip: requestIp(req), remember: body.remember === true,
+    });
+    if (!result.ok) {
+      const status = result.code === "account_secure" ? 403
+        : result.code === "account_rate" ? 429
+          : result.code === "account_storage" ? 503 : 401;
+      return accountApiError(res, status, result.message || "Email or password is incorrect, or the email is not verified.");
+    }
+    const maxAge = Math.max(0, Math.floor((result.expiresAt - Date.now()) / 1000));
+    const cookie = `${ACCOUNT_COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Strict${body.remember === true ? `; Max-Age=${Math.min(maxAge, ACCOUNT_SESSION_TTL_SECONDS)}` : ""}${https ? "; Secure" : ""}`;
+    return jsonResponse(res, 200, { authenticated: true, email: result.email }, { "set-cookie": cookie });
+  }
+
+  if (pathname === "/api/logout") {
+    const saved = await accounts.revokeSession(token, secure);
+    if (!saved) return accountApiError(res, 503, "Sign out could not be saved. Please try again.");
+    const clearCookie = `${ACCOUNT_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${https ? "; Secure" : ""}`;
+    return jsonResponse(res, 200, { authenticated: false }, { "set-cookie": clearCookie });
+  }
+
+  if (pathname === "/api/password-reset/request") {
+    const result = await accounts.requestPasswordReset(body.email, { secure, ip: requestIp(req) });
+    if (!result.ok) {
+      const status = result.code === "account_secure" ? 403
+        : result.code === "account_rate" ? 429 : 503;
+      const message = result.code === "account_rate"
+        ? "Too many reset attempts. Please wait before trying again."
+        : "Password reset email is unavailable. Please contact the server owner.";
+      return accountApiError(res, status, message);
+    }
+    return jsonResponse(res, 200, {
+      ok: true,
+      message: "If a verified account matches that email, a reset code will arrive shortly.",
+    });
+  }
+
+  const result = await accounts.resetPassword(body.email, body.code, body.password, {
+    secure, ip: requestIp(req),
+  });
+  if (!result.ok) {
+    const status = result.code === "account_secure" ? 403
+      : result.code === "account_rate" ? 429
+        : result.code === "account_storage" ? 503
+          : result.code === "account_reset_input" ? 400 : 400;
+    const message = result.code === "account_reset_input"
+      ? "Use the six-digit code and a new password of 10–128 characters."
+      : result.code === "account_rate"
+        ? "Too many reset attempts. Please wait before trying again."
+        : result.code === "account_storage"
+          ? "Your password could not be saved. Please try again."
+          : "The code is incorrect or expired, or the email is not eligible for reset.";
+    return accountApiError(res, status, message);
+  }
+  return jsonResponse(res, 200, { ok: true, message: "Password updated. Sign in with your new password." });
 }
 
 // Paw Points, leaderboards and Packs (see social.js); saved by store.js.
@@ -425,6 +622,15 @@ function applySettings(room, s) {
 // ------------------------------------------------------------------ server --
 
 const server = http.createServer((req, res) => {
+  const requestPath = req.url && req.url.split("?")[0].replace(/\/+$/, "");
+  if (requestPath && requestPath.startsWith("/api/")) {
+    handleAccountApi(req, res, requestPath).catch((e) => {
+      log("account HTTP handler error:", e && e.message ? e.message : "unknown_error");
+      if (!res.headersSent) accountApiError(res, 500, "The request could not be completed. Please try again.");
+      else res.destroy();
+    });
+    return;
+  }
   if (req.method === "GET" && req.url && req.url.split("?")[0].replace(/\/+$/, "") === "/status") {
     const online = [...clients.values()].filter((client) => client.hello).length;
     res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
@@ -571,6 +777,15 @@ async function main() {
   accounts = createAccounts({
     store, send, error, log, mailer, mailFrom,
     secret: process.env.ACCOUNT_SECRET || "",
+    onPasswordReset(accountKey) {
+      for (const client of clients.values()) {
+        if (client.account !== accountKey) continue;
+        client.account = null;
+        client.accountToken = "";
+        client.accountExpiresAt = 0;
+        client.pid = client.localPid || client.pid;
+      }
+    },
   });
   Object.assign(handlers, accounts.handlers);
   server.listen(PORT, () => log(`i-Pet Cyber Store 2096 lobby listening on port ${PORT}`));
