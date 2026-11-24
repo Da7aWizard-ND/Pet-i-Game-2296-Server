@@ -32,7 +32,7 @@ It installs Node.js and Caddy, keeps the server running (systemd service
 connects to `wss://<duckdns-name>.duckdns.org`. The same address serves the
 website at `/`. Run it again (with a newer script and website files) to update
 the server. The cloud provider's own firewall must also allow TCP 80 and 443
-in.
+in. The website's live lobby badge reads the online player count from `/status`.
 
 Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 (`SERVER_URL`). The web build on an https page can only connect to `wss://`.

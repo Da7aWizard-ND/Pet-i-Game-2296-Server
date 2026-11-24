@@ -421,6 +421,12 @@ function applySettings(room, s) {
 // ------------------------------------------------------------------ server --
 
 const server = http.createServer((req, res) => {
+  if (req.method === "GET" && req.url && req.url.split("?")[0].replace(/\/+$/, "") === "/status") {
+    const online = [...clients.values()].filter((client) => client.hello).length;
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+    res.end(JSON.stringify({ online }));
+    return;
+  }
   // The game downloads the live game settings here when it starts (GameConfig).
   if (req.url && req.url.split("?")[0].replace(/\/+$/, "") === "/config") {
     res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
