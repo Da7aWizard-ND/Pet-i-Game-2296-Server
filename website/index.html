@@ -292,7 +292,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
   <div class="wrap hero-grid">
     <div>
       <h1 class="sign">i-PET<small>Cyber Store</small><b>2096</b></h1>
-      <p class="version-mark">Game version <b>1.10.0 beta</b></p>
+      <p class="version-mark">Game version <b>1.10.1 beta</b></p>
       <p class="lead">Hide-and-seek after closing time. The pet shop's lights go down, the cyborg pets climb out of their pods, and the Catchers start counting. Squeeze into shelves, boxes and beds, trip the hunters with gadgets, and break your friends out of the Sin Bin before the clock runs out.</p>
       <div class="cta">
         <a class="btn pink" href="https://youtu.be/UhGFwTFarVM">▶ Watch How to Play</a>
@@ -465,7 +465,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
       <h2>Get the game</h2>
       <p>New to the store? The six-minute How to Play video walks through hiding, seeking, items and every mode.</p>
       <div class="plats">
-        <div class="plat"><b>Windows</b><span>PC build, version 1.10.0 beta</span></div>
+        <div class="plat"><b>Windows</b><span>PC build, version 1.10.1 beta</span></div>
         <div class="plat"><b>Android</b><span>Phone and tablet build, version 1.10.0 beta</span></div>
       </div>
       <p class="note">Download links are coming soon. Watch The Data Wizard's YouTube channel for the release.</p>
@@ -494,7 +494,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
   <div class="wrap foot">
     <img class="dw" src="img/datawizard.png" alt="The Data Wizard logo">
     <div><p><b style="color:var(--ink)">The Data Wizard presents i-Pet Cyber Store 2096.</b></p>
-      <p>Made with Godot. Version 1.10.0 beta, November 2026.</p>
+      <p>Made with Godot. Version 1.10.1 beta, November 2026.</p>
       <p><a href="https://youtu.be/UhGFwTFarVM">How to Play on YouTube</a> · <a href="#top">Back to the top</a></p></div>
     <img class="lg" src="img/logo.png" alt="i-Pet Cyber Store 2096 logo">
   </div>
@@ -672,6 +672,7 @@ const accountTrigger = document.getElementById("account-trigger");
 const accountTriggerLabel = document.getElementById("account-trigger-label");
 const signedOutView = document.getElementById("account-signed-out");
 const signedInView = document.getElementById("account-signed-in");
+const resetRequested = new URLSearchParams(location.search).get("account") === "reset";
 let accountData = null;
 const BADGE_NAMES = {
   first:"First Night",regular:"Night Shift Regular",rescuer:"Rescue Ranger",escape:"Escape Artist",
@@ -869,8 +870,23 @@ document.getElementById("account-logout").addEventListener("click", async event 
     button.disabled = false;
   }
 });
+if (resetRequested) {
+  showAccountMode("request");
+  setAccountMessage("account-reset-request-message", "");
+  accountDialog.showModal();
+  const cleanUrl = new URL(location.href);
+  cleanUrl.searchParams.delete("account");
+  history.replaceState(null, "", cleanUrl);
+}
 accountRequest("/api/me").then(data => {
-  if (data.authenticated) setAccountSignedIn(data);
+  if (data.authenticated) {
+    if (resetRequested) {
+      accountData = data;
+      accountTriggerLabel.textContent = "My profile";
+    } else {
+      setAccountSignedIn(data);
+    }
+  }
 }).catch(() => {
   accountData = null;
   accountTriggerLabel.textContent = "Sign in";
