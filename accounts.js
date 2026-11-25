@@ -384,8 +384,18 @@ function createAccounts({
     const password = typeof m.password === "string" ? m.password : "";
     const profile = cleanProfile(m.profile);
     const details = cleanRegistrationDetails(m);
-    if (!email || password.length < 10 || password.length > 128 || !profile || !c.pid || !details) {
-      return error(c, "account_input", "Enter a valid email, username, name, country, age, date of birth, and password.");
+    if (!email) return error(c, "account_input", "Enter a valid email address.");
+    if (password.length < 10 || password.length > 128) {
+      return error(c, "account_input", "Password must be between 10 and 128 characters.");
+    }
+    if (!profile) {
+      return error(c, "account_input", "Your game profile could not be validated. Restart the game and try again.");
+    }
+    if (!c.pid) {
+      return error(c, "account_input", "Your player profile is not ready. Reconnect to the server and try again.");
+    }
+    if (!details) {
+      return error(c, "account_input", "Check your username, names, country, age, and date of birth. Age must match date of birth.");
     }
     const key = emailKey(email);
     if (!limited(`register-ip:${c.ip}`, 5, 60 * 60 * 1000)
