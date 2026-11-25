@@ -35,16 +35,33 @@ p{margin:.4em 0 .9em;max-width:68ch}
 .btn.cyan{background:var(--cyan);color:var(--ink2)}
 .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);box-shadow:none}
 /* nav */
-nav{position:sticky;top:0;z-index:10;background:rgba(23,12,43,.92);backdrop-filter:blur(8px);border-bottom:2px solid var(--line)}
-.nav{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:8px max(5vw,16px)}
-.nav .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font:400 20px "Luckiest Guy",sans-serif;flex:none}
+nav{position:sticky;top:0;z-index:20;background:rgba(23,12,43,.94);backdrop-filter:blur(12px);border-bottom:2px solid var(--line);box-shadow:0 8px 24px rgba(7,3,14,.28)}
+.nav{position:relative;max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:8px max(3vw,12px)}
+.nav .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);font:400 20px "Luckiest Guy",sans-serif;flex:none}
 .nav .brand img{width:40px;height:40px}
-.links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
-.links a{flex:none;color:var(--soft);text-decoration:none;padding:10px 10px;border-radius:10px;font-weight:600;font-size:16px}
-.links a:hover,.links a:focus-visible{color:var(--ink);background:var(--panel);outline:none}
-.account-trigger{flex:none;margin-left:auto;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 14px;border:2px solid var(--cyan);border-radius:11px;background:var(--ink2);color:var(--cyan);font:700 15px Fredoka,sans-serif;cursor:pointer;box-shadow:0 0 16px rgba(51,255,224,.16)}
+.nav-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.menu-toggle,.account-trigger{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:8px 12px;border:2px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink);font:700 15px Fredoka,sans-serif;cursor:pointer;transition:transform .12s,border-color .12s,background .12s}
+.menu-toggle:hover,.menu-toggle:focus-visible{border-color:var(--gold);background:var(--bg2);outline:3px solid rgba(255,210,63,.22);outline-offset:2px}
+.menu-toggle[aria-expanded="true"]{border-color:var(--cyan);color:var(--cyan)}
+.menu-icon{display:grid;gap:3px;width:16px}
+.menu-icon i{height:2px;border-radius:2px;background:currentColor;transition:transform .15s,opacity .15s}
+.menu-toggle[aria-expanded="true"] .menu-icon i:first-child{transform:translateY(5px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] .menu-icon i:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] .menu-icon i:last-child{transform:translateY(-5px) rotate(-45deg)}
+.account-trigger{border-color:var(--cyan);background:var(--ink2);color:var(--cyan);box-shadow:0 0 16px rgba(51,255,224,.16)}
 .account-trigger:hover,.account-trigger:focus-visible{background:var(--cyan);color:var(--ink2);outline:3px solid var(--gold);outline-offset:2px}
-@media (max-width:900px){nav{position:static}.nav{flex-wrap:wrap;gap:4px}}
+.register-trigger{border-color:var(--pink);background:var(--pink);color:#fff;box-shadow:3px 4px 0 var(--ink2)}
+.register-trigger:hover,.register-trigger:focus-visible{background:#ff71c8;color:var(--ink2);outline:3px solid var(--gold);outline-offset:2px}
+.menu-panel{position:absolute;top:calc(100% + 10px);left:50%;width:min(960px,calc(100vw - 24px));transform:translateX(-50%);grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;border:2px solid var(--cyan);border-radius:18px;background:linear-gradient(145deg,rgba(42,23,72,.98),rgba(18,8,32,.98));box-shadow:0 16px 38px rgba(0,0,0,.5),0 0 24px rgba(51,255,224,.15)}
+.menu-panel:not([hidden]){display:grid}
+.menu-group{padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(18,8,32,.72)}
+.menu-kicker{margin:0 0 8px;color:var(--gold);font:400 17px "Luckiest Guy",Fredoka,sans-serif;letter-spacing:.04em}
+.menu-group-links{display:grid;gap:3px}
+.menu-group-links a{display:flex;align-items:center;min-height:38px;padding:7px 9px;border-radius:8px;color:var(--soft);font-size:15px;font-weight:600;text-decoration:none;transition:background .12s,color .12s,transform .12s}
+.menu-group-links a:hover,.menu-group-links a:focus-visible{background:var(--panel);color:var(--cyan);outline:2px solid var(--cyan);outline-offset:-2px;transform:translateX(2px)}
+@media (max-width:760px){.menu-panel{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.nav{gap:8px;padding:7px 10px}.nav-actions{gap:5px}.nav .brand{gap:0}.nav .brand span{display:none}.menu-toggle,.account-trigger{min-height:40px;padding:7px 9px;font-size:13px}.menu-panel{max-height:calc(100dvh - 76px);overflow:auto;grid-template-columns:minmax(0,1fr);padding:10px}.menu-group{padding:9px}}
+@media (max-width:360px){.menu-toggle .menu-label{display:none}}
 /* hero */
 .hero{background:radial-gradient(120% 80% at 70% 20%,#3a1a66 0%,var(--bg) 60%);border-bottom:3px solid var(--ink2)}
 .hero-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,4vw,48px);align-items:center}
@@ -251,6 +268,11 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
 .account-form button:disabled,.account-action:disabled{opacity:.6;cursor:wait;transform:none}
 .account-link{justify-self:start;padding:4px 0;border:0;background:none;color:var(--cyan);font:600 14px Fredoka,sans-serif;text-decoration:underline;cursor:pointer}
 .account-link:hover,.account-link:focus-visible{color:var(--gold)}
+.account-layout.register-mode{grid-template-columns:minmax(0,1fr)}
+.account-register-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.account-register-grid .full{grid-column:1/-1}
+.account-field-error{min-height:1em;color:#ff9b80;font-size:12px;font-weight:600}
+.account-form input[aria-invalid=true]{border-color:#ff9b80}
 .account-check{display:flex!important;grid-template-columns:auto 1fr;align-items:start;gap:9px!important;color:var(--soft)!important;font-weight:400!important}
 .account-check input{width:18px;height:18px;margin:2px 0;accent-color:var(--cyan)}
 .account-check small{display:block;margin-top:2px;color:var(--soft);font-size:12px}
@@ -277,15 +299,39 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
 [hidden]{display:none!important}
 @media (max-width:700px){.account-layout{grid-template-columns:minmax(0,1fr)}.account-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:420px){.account-collections{grid-template-columns:1fr}.account-id b{font-size:21px}}
+@media (max-width:520px){.account-register-grid{grid-template-columns:minmax(0,1fr)}.account-register-grid .full{grid-column:auto}}
 </style>
 </head>
 <body>
-<nav aria-label="Sections"><div class="nav">
-  <a class="brand" href="#top"><img src="img/logo.png" alt="">i-Pet 2096</a>
-  <div class="links">
-    <a href="#how">How it plays</a><a href="#pets">Pets</a><a href="#modes">Modes</a><a href="#maps">Maps</a><a href="#items">Items</a><a href="#specials">Specials</a><a href="#wardrobe">Wardrobe</a><a href="#profile">Profile</a><a href="#online">Online</a><a href="#controls">Controls</a><a href="#get">Get the game</a><a href="#faq">FAQ</a>
+<nav aria-label="Main navigation"><div class="nav">
+  <a class="brand" href="#top"><img src="img/logo.png" alt=""><span>i-Pet 2096</span></a>
+  <div class="nav-actions">
+    <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu" aria-label="Open site sections">
+      <span class="menu-icon" aria-hidden="true"><i></i><i></i><i></i></span><span class="menu-label">Explore</span>
+    </button>
+    <button class="account-trigger register-trigger" id="register-trigger" type="button" aria-haspopup="dialog" aria-controls="account-dialog">Register</button>
+    <button class="account-trigger" id="account-trigger" type="button" aria-haspopup="dialog" aria-controls="account-dialog"><span aria-hidden="true">+</span><span id="account-trigger-label">Sign in</span></button>
   </div>
-  <button class="account-trigger" id="account-trigger" type="button" aria-haspopup="dialog" aria-controls="account-dialog"><span aria-hidden="true">+</span><span id="account-trigger-label">Sign in</span></button>
+  <div class="menu-panel" id="site-menu" hidden>
+    <section class="menu-group" aria-label="Play">
+      <p class="menu-kicker">Play</p>
+      <div class="menu-group-links">
+        <a href="#how">How it plays</a><a href="#pets">Meet the pets</a><a href="#modes">Game modes</a><a href="#maps">Maps</a>
+      </div>
+    </section>
+    <section class="menu-group" aria-label="Your store">
+      <p class="menu-kicker">Your store</p>
+      <div class="menu-group-links">
+        <a href="#items">Items</a><a href="#specials">Special items</a><a href="#wardrobe">Wardrobe</a><a href="#profile">Player profile</a>
+      </div>
+    </section>
+    <section class="menu-group" aria-label="Online and help">
+      <p class="menu-kicker">Online &amp; help</p>
+      <div class="menu-group-links">
+        <a href="#online">Online play</a><a href="#controls">Controls</a><a href="#get">Get the game</a><a href="#faq">FAQ</a>
+      </div>
+    </section>
+  </div>
 </div></nav>
 
 <header class="band hero" id="top">
@@ -295,8 +341,9 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
       <p class="version-mark">Game version <b>1.10.1 beta</b></p>
       <p class="lead">Hide-and-seek after closing time. The pet shop's lights go down, the cyborg pets climb out of their pods, and the Catchers start counting. Squeeze into shelves, boxes and beds, trip the hunters with gadgets, and break your friends out of the Sin Bin before the clock runs out.</p>
       <div class="cta">
-        <a class="btn pink" href="https://youtu.be/UhGFwTFarVM">▶ Watch How to Play</a>
+        <button class="btn pink register-trigger" id="hero-register-trigger" type="button" aria-haspopup="dialog" aria-controls="account-dialog">Create free account</button>
         <a class="btn cyan" href="#get">Get the game</a>
+        <a class="btn ghost" href="https://youtu.be/UhGFwTFarVM">Watch How to Play</a>
       </div>
       <div class="server-status" id="server-status" data-state="checking" role="status" aria-live="polite" aria-atomic="true">
         <span class="server-led" aria-hidden="true"></span><span id="server-status-text">Checking the lobby…</span>
@@ -465,8 +512,8 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
       <h2>Get the game</h2>
       <p>New to the store? The six-minute How to Play video walks through hiding, seeking, items and every mode.</p>
       <div class="plats">
-        <div class="plat"><b>Windows</b><span>PC build, version 1.10.1 beta</span></div>
-        <div class="plat"><b>Android</b><span>Phone and tablet build, version 1.10.0 beta</span></div>
+        <div class="plat"><b>Windows</b><span>PC build, version 1.10.7 beta</span></div>
+        <div class="plat"><b>Android</b><span>Phone and tablet build, version 1.10.7 beta</span></div>
       </div>
       <p class="note">Download links are coming soon. Watch The Data Wizard's YouTube channel for the release.</p>
     </div>
@@ -479,7 +526,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
     <details><summary>Can I play on my own?</summary><p>Yes. Every mode works offline with computer pets as Hiders and Catchers. Pick an easy, normal or hard difficulty, and up to 30 computer teammates.</p></details>
     <details><summary>Who are the "cbot" players?</summary><p>They're the computer pets. Each one gets a random tag like cbot4821 in its name bubble, so you can tell who's who in a crowded match.</p></details>
     <details><summary>How many people can play online?</summary><p>Up to 8 players in a room. Computer pets fill the empty places so matches always feel busy.</p></details>
-    <details><summary>Do I need an account?</summary><p>No. You can play without one. To sync your saved game profile between devices, create an account in the game. No email code is required; use an email address you can access for password recovery. Then use that email and password with the Sign in button here.</p></details>
+    <details><summary>Do I need an account?</summary><p>No. You can play without one. To sync your saved game profile between devices, register here or in the game. No email code is required; use an email address you can access for password recovery. Sign into the updated game once to link its local profile to an account created here.</p></details>
     <details><summary>How do I reset my password?</summary><p>Choose Sign in, then Forgot password. A reset code is sent to the email address on your account. Reset email delivery depends on the game server's email settings.</p></details>
     <details><summary>Is online chat safe?</summary><p>Chat is filtered, quick-chat phrases are built in, and players can be reported or removed from a room by its host.</p></details>
     <details><summary>Which modes can I play online?</summary><p>Classic matches are online today. Every mode can be played offline.</p></details>
@@ -494,7 +541,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
   <div class="wrap foot">
     <img class="dw" src="img/datawizard.png" alt="The Data Wizard logo">
     <div><p><b style="color:var(--ink)">The Data Wizard presents i-Pet Cyber Store 2096.</b></p>
-      <p>Made with Godot. Version 1.10.1 beta, November 2026.</p>
+      <p>Made with Godot. Version 1.10.7 beta, November 2026.</p>
       <p><a href="https://youtu.be/UhGFwTFarVM">How to Play on YouTube</a> · <a href="#top">Back to the top</a></p></div>
     <img class="lg" src="img/logo.png" alt="i-Pet Cyber Store 2096 logo">
   </div>
@@ -507,10 +554,10 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
       <button class="account-close" id="account-close" type="button" aria-label="Close account window">×</button>
     </div>
     <div class="account-body">
-      <section id="account-signed-out" class="account-layout" aria-label="Sign in or reset your password">
+      <section id="account-signed-out" class="account-layout" aria-label="Sign in, register, or reset your password">
         <div class="account-card" id="account-login-view">
           <h3>Welcome back</h3>
-          <p>Use the email and password you registered in the game.</p>
+          <p>Use the email and password for your i-Pet account.</p>
           <form class="account-form" id="account-login-form">
             <label>Email address<input id="account-login-email" name="email" type="email" autocomplete="username" maxlength="254" required></label>
             <label>Password<input id="account-login-password" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
@@ -518,6 +565,55 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
             <button type="submit" id="account-login-submit">Sign in</button>
             <p class="account-message" id="account-login-message" role="status" aria-live="polite"></p>
             <button class="account-link" id="account-forgot" type="button">Forgot password?</button>
+            <button class="account-link" id="account-create" type="button">Create a new account</button>
+          </form>
+        </div>
+        <div class="account-card" id="account-register-view" hidden>
+          <h3>Create your player account</h3>
+          <p>No email code is required. Your local game profile will be linked safely the first time you sign in to the updated game.</p>
+          <form class="account-form" id="account-register-form" novalidate>
+            <div class="account-register-grid">
+              <label class="full">Email address
+                <input id="account-register-email" name="email" type="email" autocomplete="email" maxlength="254" data-validate required aria-describedby="account-register-email-error">
+                <small class="account-field-error" id="account-register-email-error" aria-live="polite"></small>
+              </label>
+              <label>Username
+                <input id="account-register-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="24" data-validate required aria-describedby="account-register-username-error">
+                <small class="account-field-error" id="account-register-username-error" aria-live="polite"></small>
+              </label>
+              <label>Country
+                <input id="account-register-country" name="country" type="text" autocomplete="country-name" maxlength="80" data-validate required aria-describedby="account-register-country-error">
+                <small class="account-field-error" id="account-register-country-error" aria-live="polite"></small>
+              </label>
+              <label>First name
+                <input id="account-register-first-name" name="first_name" type="text" autocomplete="given-name" maxlength="80" data-validate required aria-describedby="account-register-first-name-error">
+                <small class="account-field-error" id="account-register-first-name-error" aria-live="polite"></small>
+              </label>
+              <label>Surname
+                <input id="account-register-surname" name="surname" type="text" autocomplete="family-name" maxlength="80" data-validate required aria-describedby="account-register-surname-error">
+                <small class="account-field-error" id="account-register-surname-error" aria-live="polite"></small>
+              </label>
+              <label>Age
+                <input id="account-register-age" name="age" type="number" min="0" max="120" step="1" inputmode="numeric" data-validate required aria-describedby="account-register-age-error">
+                <small class="account-field-error" id="account-register-age-error" aria-live="polite"></small>
+              </label>
+              <label>Date of birth
+                <input id="account-register-dob" name="date_of_birth" type="date" data-validate required aria-describedby="account-register-dob-error">
+                <small class="account-field-error" id="account-register-dob-error" aria-live="polite"></small>
+              </label>
+              <label>Password
+                <input id="account-register-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" data-validate required aria-describedby="account-register-password-error">
+                <small class="account-field-error" id="account-register-password-error" aria-live="polite"></small>
+              </label>
+              <label>Confirm password
+                <input id="account-register-confirm" name="confirm_password" type="password" autocomplete="new-password" minlength="10" maxlength="128" data-validate required aria-describedby="account-register-confirm-error">
+                <small class="account-field-error" id="account-register-confirm-error" aria-live="polite"></small>
+              </label>
+            </div>
+            <label class="account-check"><input id="account-register-remember" name="remember" type="checkbox"><span>Remember me on this device<small>This keeps you signed in; this website never saves your password.</small></span></label>
+            <button type="submit" id="account-register-submit">Create account</button>
+            <p class="account-message" id="account-register-message" role="status" aria-live="polite"></p>
+            <button class="account-link" id="account-register-back" type="button">Already have an account? Sign in</button>
           </form>
         </div>
         <div class="account-card" id="account-reset-request-view" hidden>
@@ -542,10 +638,10 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
             <button class="account-link" id="account-reset-back-confirm" type="button">Back to sign in</button>
           </form>
         </div>
-        <div class="account-card">
+        <div class="account-card" id="account-promo">
           <h3>Your profile travels with you</h3>
           <p>Bolts, your wardrobe, special items, badges and lifetime stats are saved with your account.</p>
-          <p>New here? Create an account from the Account page inside the game. Email verification is not required. Website sign-in uses that same account.</p>
+          <p>New here? Register on this site or in the game. Your saved game profile is linked when you first sign in from the updated game.</p>
           <p class="note">The site stores only an expiring server session in a protected cookie, never your password.</p>
         </div>
       </section>
@@ -670,10 +766,29 @@ document.getElementById("pptable").innerHTML = PP.map(([a,b]) => `<tr><td>${a}</
 const accountDialog = document.getElementById("account-dialog");
 const accountTrigger = document.getElementById("account-trigger");
 const accountTriggerLabel = document.getElementById("account-trigger-label");
+const registerTriggers = [...document.querySelectorAll('.register-trigger[aria-controls="account-dialog"]')];
+const menuToggle = document.getElementById("menu-toggle");
+const siteMenu = document.getElementById("site-menu");
 const signedOutView = document.getElementById("account-signed-out");
 const signedInView = document.getElementById("account-signed-in");
 const resetRequested = new URLSearchParams(location.search).get("account") === "reset";
 let accountData = null;
+function setSiteMenuOpen(open) {
+  siteMenu.hidden = !open;
+  menuToggle.setAttribute("aria-expanded", String(open));
+  menuToggle.setAttribute("aria-label", open ? "Close site sections" : "Open site sections");
+}
+menuToggle.addEventListener("click", () => setSiteMenuOpen(siteMenu.hidden));
+siteMenu.querySelectorAll("a").forEach(link => link.addEventListener("click", () => setSiteMenuOpen(false)));
+document.addEventListener("click", event => {
+  if (!siteMenu.hidden && !siteMenu.contains(event.target) && !menuToggle.contains(event.target)) setSiteMenuOpen(false);
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !siteMenu.hidden) {
+    setSiteMenuOpen(false);
+    menuToggle.focus();
+  }
+});
 const BADGE_NAMES = {
   first:"First Night",regular:"Night Shift Regular",rescuer:"Rescue Ranger",escape:"Escape Artist",
   catcher:"Top Catcher",ghost:"Ghost of the Aisles",close:"Close Shave",tourist:"Store Tourist",
@@ -694,8 +809,11 @@ function setAccountMessage(id, message, isError = false) {
 }
 function showAccountMode(mode) {
   document.getElementById("account-login-view").hidden = mode !== "login";
+  document.getElementById("account-register-view").hidden = mode !== "register";
   document.getElementById("account-reset-request-view").hidden = mode !== "request";
   document.getElementById("account-reset-confirm-view").hidden = mode !== "confirm";
+  document.getElementById("account-promo").hidden = mode === "register";
+  signedOutView.classList.toggle("register-mode", mode === "register");
   signedOutView.hidden = false;
   signedInView.hidden = true;
 }
@@ -725,6 +843,7 @@ function setAccountSignedIn(data) {
   accountData = data;
   signedOutView.hidden = true;
   signedInView.hidden = false;
+  registerTriggers.forEach(trigger => trigger.hidden = true);
   accountTriggerLabel.textContent = "My profile";
   const profile = data.profile && typeof data.profile === "object" ? data.profile : {};
   const player = data.player && typeof data.player === "object" ? data.player : {};
@@ -772,14 +891,21 @@ async function accountRequest(path, body) {
   if (!response.ok) throw new Error(result.error || `Request failed (${response.status}).`);
   return result;
 }
-function showAccountDialog() {
-  if (accountDialog.open) return;
+function showAccountDialog(mode = "login") {
   if (accountData) signedInView.hidden = false;
-  else showAccountMode("login");
-  accountDialog.showModal();
+  else showAccountMode(mode);
+  if (!accountDialog.open) accountDialog.showModal();
 }
-accountTrigger.addEventListener("click", showAccountDialog);
+function showRegisterDialog() {
+  if (!accountData) setAccountMessage("account-register-message", "");
+  showAccountDialog("register");
+  if (!accountData) document.getElementById("account-register-email").focus();
+}
+accountTrigger.addEventListener("click", () => showAccountDialog());
+registerTriggers.forEach(trigger => trigger.addEventListener("click", showRegisterDialog));
 document.getElementById("account-close").addEventListener("click", () => accountDialog.close());
+document.getElementById("account-create").addEventListener("click", showRegisterDialog);
+document.getElementById("account-register-back").addEventListener("click", () => showAccountMode("login"));
 document.getElementById("account-forgot").addEventListener("click", () => {
   document.getElementById("account-reset-email").value = document.getElementById("account-login-email").value;
   setAccountMessage("account-reset-request-message", "");
@@ -787,6 +913,144 @@ document.getElementById("account-forgot").addEventListener("click", () => {
 });
 document.getElementById("account-reset-back").addEventListener("click", () => showAccountMode("login"));
 document.getElementById("account-reset-back-confirm").addEventListener("click", () => showAccountMode("login"));
+
+const accountRegisterForm = document.getElementById("account-register-form");
+const accountRegisterInputs = [...accountRegisterForm.querySelectorAll("[data-validate]")];
+const accountRegisterAge = document.getElementById("account-register-age");
+const accountRegisterDob = document.getElementById("account-register-dob");
+const accountRegisterPassword = document.getElementById("account-register-password");
+const accountRegisterConfirm = document.getElementById("account-register-confirm");
+
+function registrationAgeFromDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return -1;
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (year < 1900) return -1;
+  const birth = new Date(Date.UTC(year, month - 1, day));
+  if (birth.getUTCFullYear() !== year || birth.getUTCMonth() !== month - 1 || birth.getUTCDate() !== day) return -1;
+  const today = new Date();
+  let age = today.getUTCFullYear() - year;
+  if (today.getUTCMonth() + 1 < month || (today.getUTCMonth() + 1 === month && today.getUTCDate() < day)) age--;
+  return age >= 0 && age <= 120 ? age : -1;
+}
+
+function registrationFieldIssue(input) {
+  const value = input.value.trim();
+  switch (input.name) {
+    case "email":
+      if (!value || value.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Enter a valid email address.";
+      break;
+    case "username":
+      if (!/^[A-Za-z0-9][A-Za-z0-9_-]{2,23}$/.test(value)) return "Use 3–24 letters, numbers, underscores, or hyphens.";
+      break;
+    case "first_name":
+    case "surname": {
+      const name = value.normalize("NFC").replace(/\s+/gu, " ");
+      if (!name || [...name].length > 80 || !/\p{L}/u.test(name)
+        || /[^\p{L}\p{M} .'\u2019\u02BC\u2010-\u2015-]/u.test(name)) return "Enter a name using letters and common name punctuation.";
+      break;
+    }
+    case "country": {
+      const country = value.normalize("NFC").replace(/\s+/gu, " ");
+      if ([...country].length < 2 || [...country].length > 80 || !/\p{L}/u.test(country)
+        || /[\p{Cc}\p{Cf}]/u.test(country)) return "Enter a country name (2–80 characters).";
+      break;
+    }
+    case "age": {
+      if (value === "" || !Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 120) {
+        return "Enter an age from 0 to 120.";
+      }
+      const dateAge = registrationAgeFromDate(accountRegisterDob.value);
+      if (dateAge >= 0 && Number(value) !== dateAge) return "Age must match date of birth.";
+      break;
+    }
+    case "date_of_birth": {
+      const dateAge = registrationAgeFromDate(value);
+      if (dateAge < 0) return "Enter a real date of birth from 1900 to today.";
+      if (accountRegisterAge.value !== "" && Number.isInteger(Number(accountRegisterAge.value))
+        && Number(accountRegisterAge.value) !== dateAge) return "Age must match date of birth.";
+      break;
+    }
+    case "password":
+      if (input.value.length < 10 || input.value.length > 128) return "Password must be 10–128 characters.";
+      break;
+    case "confirm_password":
+      if (!input.value) return "Re-enter your password to confirm it.";
+      if (input.value !== accountRegisterPassword.value) return "Passwords must match.";
+      break;
+  }
+  return "";
+}
+
+function validateRegistrationField(input) {
+  const issue = registrationFieldIssue(input);
+  const error = document.getElementById(`${input.id}-error`);
+  error.textContent = issue;
+  input.setAttribute("aria-invalid", issue ? "true" : "false");
+  return !issue;
+}
+
+for (const input of accountRegisterInputs) {
+  input.addEventListener("blur", () => {
+    input.dataset.touched = "true";
+    validateRegistrationField(input);
+    if (input === accountRegisterAge && accountRegisterDob.dataset.touched) validateRegistrationField(accountRegisterDob);
+    if (input === accountRegisterDob && accountRegisterAge.dataset.touched) validateRegistrationField(accountRegisterAge);
+    if (input === accountRegisterPassword && accountRegisterConfirm.dataset.touched) validateRegistrationField(accountRegisterConfirm);
+  });
+}
+
+accountRegisterForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  let firstInvalid = null;
+  for (const input of accountRegisterInputs) {
+    input.dataset.touched = "true";
+    if (!validateRegistrationField(input) && !firstInvalid) firstInvalid = input;
+  }
+  if (firstInvalid) {
+    firstInvalid.focus();
+    firstInvalid.scrollIntoView({block:"center",behavior:"smooth"});
+    setAccountMessage("account-register-message", "Correct the highlighted fields before creating your account.", true);
+    return;
+  }
+
+  const submit = document.getElementById("account-register-submit");
+  submit.disabled = true;
+  submit.textContent = "Creating account...";
+  setAccountMessage("account-register-message", "");
+  let created = false;
+  try {
+    await accountRequest("/api/register", {
+      email: document.getElementById("account-register-email").value.trim(),
+      username: document.getElementById("account-register-username").value.trim(),
+      first_name: document.getElementById("account-register-first-name").value.trim(),
+      surname: document.getElementById("account-register-surname").value.trim(),
+      country: document.getElementById("account-register-country").value.trim(),
+      age: Number(accountRegisterAge.value),
+      date_of_birth: accountRegisterDob.value,
+      password: accountRegisterPassword.value,
+      remember: document.getElementById("account-register-remember").checked,
+    });
+    created = true;
+    const data = await accountRequest("/api/me");
+    setAccountSignedIn(data);
+    setAccountMessage("account-profile-message", "Account created. Sign in with the updated game to link your saved local progress.");
+    accountRegisterForm.reset();
+  } catch (error) {
+    if (created) {
+      showAccountMode("login");
+      setAccountMessage("account-login-message", "Your account was created, but its profile could not be loaded. Sign in to continue.", true);
+    } else {
+      setAccountMessage("account-register-message", error.message || "Could not create your account. Please try again.", true);
+    }
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Create account";
+  }
+});
 
 document.getElementById("account-login-form").addEventListener("submit", async event => {
   event.preventDefault();
@@ -860,6 +1124,7 @@ document.getElementById("account-logout").addEventListener("click", async event 
   try {
     await accountRequest("/api/logout", {});
     accountData = null;
+    registerTriggers.forEach(trigger => trigger.hidden = false);
     accountTriggerLabel.textContent = "Sign in";
     document.getElementById("account-login-form").reset();
     showAccountMode("login");
@@ -882,6 +1147,7 @@ accountRequest("/api/me").then(data => {
   if (data.authenticated) {
     if (resetRequested) {
       accountData = data;
+      registerTriggers.forEach(trigger => trigger.hidden = true);
       accountTriggerLabel.textContent = "My profile";
     } else {
       setAccountSignedIn(data);
@@ -889,6 +1155,7 @@ accountRequest("/api/me").then(data => {
   }
 }).catch(() => {
   accountData = null;
+  registerTriggers.forEach(trigger => trigger.hidden = false);
   accountTriggerLabel.textContent = "Sign in";
 });
 }
