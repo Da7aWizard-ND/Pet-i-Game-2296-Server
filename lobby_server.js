@@ -19,7 +19,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
-const nodemailer = require("nodemailer");
+const { sendEmail } = require("./email_gateway");
 const { cleanText, cleanTag } = require("./filter");
 const { Store } = require("./store");
 const { createSocial } = require("./social");
@@ -758,24 +758,9 @@ async function main() {
   Object.assign(handlers, createCodes({ store, send, error, log, playerOf: social.playerOf }).handlers);
   config = createConfig({ store, clients, send, error, log });
   Object.assign(handlers, config.handlers);
-  const smtpHost = process.env.SMTP_HOST || "";
-  const smtpUser = process.env.SMTP_USER || "";
-  const smtpPass = process.env.SMTP_PASS || "";
-  const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
-  const mailFrom = process.env.SMTP_FROM || "";
-  const mailer = smtpHost && mailFrom && Number.isInteger(smtpPort) && smtpPort > 0 && smtpPort < 65536
-    && (!!smtpUser === !!smtpPass)
-    ? nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        requireTLS: smtpPort !== 465,
-        ...(smtpUser ? { auth: { user: smtpUser, pass: smtpPass } } : {}),
-        tls: { minVersion: "TLSv1.2" },
-      })
-    : null;
+  const mailer = process.env.NODE_ENV === "test" ? null : { sendMail: sendEmail };
   accounts = createAccounts({
-    store, send, error, log, mailer, mailFrom,
+    store, send, error, log, mailer,
     secret: process.env.ACCOUNT_SECRET || "",
     onPasswordReset(accountKey) {
       for (const client of clients.values()) {

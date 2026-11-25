@@ -49,7 +49,7 @@ fi
 
 echo "==> Installing the lobby server files in /opt/peti-lobby"
 $SUDO mkdir -p /opt/peti-lobby
-for FILE in lobby_server.js filter.js store.js social.js codes.js config.js accounts.js package.json package-lock.json; do
+for FILE in lobby_server.js filter.js store.js social.js codes.js config.js accounts.js email_gateway.js package.json package-lock.json; do
   if [[ ! -f "$SCRIPT_DIR/$FILE" ]]; then
     echo "Required server file is missing: $SCRIPT_DIR/$FILE"
     exit 1

@@ -85,7 +85,7 @@ async function verifyPassword(password, stored) {
 }
 
 function createAccounts({
-  store, send, error, log = console.log, mailer = null, mailFrom = "", secret = "",
+  store, send, error, log = console.log, mailer = null, secret = "",
   onPasswordReset = () => {},
 }) {
   const sessionIndex = new Map();
@@ -240,13 +240,12 @@ function createAccounts({
     if (!await store.flush()) return { ok: false, code: "account_storage" };
     try {
       await mailer.sendMail({
-        from: mailFrom,
         to: email,
         subject: "Reset your i-Pet account password",
         text: `Your i-Pet Cyber Store 2096 password reset code is ${code}.\n\nIt expires in 15 minutes. If you did not request this, you can ignore this email.`,
       });
     } catch (e) {
-      log("password reset email delivery failed:", e && e.code ? e.code : "smtp_error");
+      log("password reset email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
       return { ok: false, code: "email_failed" };
     }
     return { ok: true };
@@ -311,14 +310,13 @@ function createAccounts({
     }
     try {
       await mailer.sendMail({
-        from: mailFrom,
         to: account.email,
         subject: "Your i-Pet account verification code",
         text: `Your i-Pet Cyber Store 2096 verification code is ${code}.\n\nIt expires in 15 minutes. If you did not request this, you can ignore this email.`,
       });
     } catch (e) {
-      log("account email delivery failed:", e && e.code ? e.code : "smtp_error");
-      return error(c, "email_failed", "The verification email could not be sent. Check the server mail settings and try again.");
+      log("account email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
+      return error(c, "email_failed", "The verification email could not be sent. Please try again later.");
     }
     send(c, { t: "account", event: "verification_sent", email: account.email });
   }

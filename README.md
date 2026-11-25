@@ -52,35 +52,18 @@ Players can view their saved profile there, choose **Remember me on this
 device** for a 30-day protected session, or request a six-digit email
 password-reset code. Without that option, the site uses a browser-session
 cookie and the server expires the session after 12 hours. The site never
-saves the password. Password reset and account verification both require the
-SMTP configuration below.
+saves the password. Password reset and account verification send mail through the GoDaddy Node.js
+Hosting email gateway at `127.0.0.1:2525`. The sender identity is selected by
+the platform, so the app does not need SMTP credentials or a configured
+`from` address. Set `ACCOUNT_SECRET` in the GoDaddy app's environment variables
+to a strong value generated with `openssl rand -hex 32`; do not commit it.
+Restart or redeploy the app after setting it.
 
-Email delivery is intentionally disabled until the server operator configures
-an SMTP service. After deployment, create `/etc/peti-lobby.env` on the server:
-
-    sudo nano /etc/peti-lobby.env
-
-Set these values (use your SMTP provider's host and credentials; do not put
-real credentials in the repository):
-
-    ACCOUNT_SECRET=<at-least-32-random-characters>
-    SMTP_HOST=<smtp-host>
-    SMTP_PORT=587
-    SMTP_USER=<smtp-username>
-    SMTP_PASS=<smtp-password-or-app-password>
-    SMTP_FROM=<verified-sender-address>
-
-Generate a strong account secret with `openssl rand -hex 32`. Then restrict
-the file and restart the service:
-
-    sudo chown root:root /etc/peti-lobby.env
-    sudo chmod 600 /etc/peti-lobby.env
-    sudo systemctl restart peti-lobby
-
-The service reads this optional environment file. Account registration and
-sign-in require a secure `wss://` connection outside localhost. If SMTP or the
-account secret is missing, registration reports that configuration error
-instead of claiming that a verification email was sent.
+This email gateway is available only inside GoDaddy Node.js Hosting. Local
+development and the Ubuntu `setup_server.sh` deployment cannot send account
+emails through it; those deployments need an email-gateway adapter available
+on their own host. Account registration and sign-in require a secure `wss://`
+connection outside localhost.
 
 ## Files
 
