@@ -40,19 +40,21 @@ Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 
 ## Email accounts and profile sync
 
-The in-game Account page links a verified email/password account to the
-profile already on that device. A six-digit verification code is emailed and
-expires after 15 minutes. After verification, the account receives 250 bolts
-once. Registered gameplay progress—including bolts, wardrobe, special items,
-challenges, badges and stats—is stored on the server and synced when online.
+The in-game Account page creates an account using an email address, unique
+username, first name, surname, country, age and date of birth. Email ownership
+is not confirmed during registration and no code is sent; users should enter
+an address they can access for password recovery. New accounts receive 250
+bolts once. Registered gameplay progress—including bolts, wardrobe, special
+items, challenges, badges and stats—is stored on the server and synced when
+online. Device preferences remain local.
 Device preferences remain local.
 
-The website's **Sign in** button uses the same verified email and password.
+The website's **Sign in** button uses the same email and password.
 Players can view their saved profile there, choose **Remember me on this
 device** for a 30-day protected session, or request a six-digit email
 password-reset code. Without that option, the site uses a browser-session
 cookie and the server expires the session after 12 hours. The site never
-saves the password. Password reset and account verification send mail through the GoDaddy Node.js
+saves the password. Password-reset email is sent through the GoDaddy Node.js
 Hosting email gateway at `127.0.0.1:2525`. The sender identity is selected by
 the platform, so the app does not need SMTP credentials or a configured
 `from` address. Set `ACCOUNT_SECRET` in the GoDaddy app's environment variables
@@ -69,7 +71,7 @@ connection outside localhost.
 
 - `setup_server.sh`: installs the bundled server modules and website on Ubuntu.
 - `lobby_server.js`: WebSocket lobby, game relay and HTTP site server.
-- `accounts.js`: email verification, password authentication and profile sync.
+- `accounts.js`: account registration, password authentication and profile sync.
 - `store.js`: persistent MySQL or JSON-file storage.
 - `social.js`, `codes.js`, `config.js`: online profile, gift-code and live-config handlers.
 - `filter.js`: chat/tag word filter and contact-info blocker. Add words to

@@ -227,7 +227,7 @@ async function handleAccountApi(req, res, pathname) {
       const status = result.code === "account_secure" ? 403
         : result.code === "account_rate" ? 429
           : result.code === "account_storage" ? 503 : 401;
-      return accountApiError(res, status, result.message || "Email or password is incorrect, or the email is not verified.");
+      return accountApiError(res, status, result.message || "Email or password is incorrect.");
     }
     const maxAge = Math.max(0, Math.floor((result.expiresAt - Date.now()) / 1000));
     const cookie = `${ACCOUNT_COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Strict${body.remember === true ? `; Max-Age=${Math.min(maxAge, ACCOUNT_SESSION_TTL_SECONDS)}` : ""}${https ? "; Secure" : ""}`;
@@ -253,7 +253,7 @@ async function handleAccountApi(req, res, pathname) {
     }
     return jsonResponse(res, 200, {
       ok: true,
-      message: "If a verified account matches that email, a reset code will arrive shortly.",
+      message: "If an account matches that email, a reset code will arrive shortly.",
     });
   }
 

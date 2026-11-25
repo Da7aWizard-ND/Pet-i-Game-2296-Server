@@ -10,6 +10,7 @@ const SESSION_TTL = 30 * 24 * 60 * 60 * 1000;
 const SESSION_ONLY_TTL = 12 * 60 * 60 * 1000;
 const PROFILE_MAX_BYTES = 32 * 1024;
 const BONUS_BOLTS = 250;
+const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{2,23}$/;
 const PROFILE_KEYS = new Set([
   "version", "species", "record", "daily", "bonus", "guide_done", "ctf_guide_done",
   "bolts", "vend_passes", "wardrobe_owned", "outfit", "specials", "lifetime", "badges",
@@ -20,6 +21,49 @@ function normalizeEmail(value) {
   if (typeof value !== "string") return "";
   const email = value.trim().toLowerCase();
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+}
+
+function cleanPersonName(value) {
+  const name = typeof value === "string" ? value.trim().normalize("NFC").replace(/\s+/gu, " ") : "";
+  if (!name || [...name].length > 80 || !/\p{L}/u.test(name)
+    || /[^\p{L}\p{M} .'\u2019\u02BC\u2010-\u2015-]/u.test(name)) return "";
+  return name;
+}
+
+function cleanCountry(value) {
+  const country = typeof value === "string" ? value.trim().normalize("NFC").replace(/\s+/gu, " ") : "";
+  if ([...country].length < 2 || [...country].length > 80 || !/\p{L}/u.test(country)
+    || /[\p{Cc}\p{Cf}]/u.test(country)) return "";
+  return country;
+}
+
+function ageFromDateOfBirth(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return -1;
+  const [year, month, day] = value.split("-").map(Number);
+  if (year < 1900) return -1;
+  const birthDate = new Date(Date.UTC(year, month - 1, day));
+  if (birthDate.getUTCFullYear() !== year || birthDate.getUTCMonth() !== month - 1
+    || birthDate.getUTCDate() !== day) return -1;
+  const today = new Date();
+  let age = today.getUTCFullYear() - year;
+  if (today.getUTCMonth() + 1 < month
+    || (today.getUTCMonth() + 1 === month && today.getUTCDate() < day)) age--;
+  return age >= 0 && age <= 120 ? age : -1;
+}
+
+function cleanRegistrationDetails(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const username = typeof value.username === "string" ? value.username.trim() : "";
+  const firstName = cleanPersonName(value.first_name);
+  const surname = cleanPersonName(value.surname);
+  const country = cleanCountry(value.country);
+  const age = value.age;
+  const dateOfBirth = typeof value.date_of_birth === "string" ? value.date_of_birth.trim() : "";
+  if (!USERNAME_PATTERN.test(username) || !firstName || !surname || !country
+    || !Number.isSafeInteger(age) || age < 0 || age > 120 || ageFromDateOfBirth(dateOfBirth) !== age) {
+    return null;
+  }
+  return { username, firstName, surname, country, age, dateOfBirth };
 }
 
 function emailKey(email) {
@@ -129,6 +173,28 @@ function createAccounts({
     return null;
   }
 
+  function usernameTaken(username, ignoredKeys = []) {
+    const ignored = new Set(ignoredKeys.filter(Boolean));
+    const normalized = username.toLowerCase();
+    for (const [key, account] of store.accounts) {
+      if (ignored.has(key)) continue;
+      if (typeof account.username === "string" && account.username.toLowerCase() === normalized) return true;
+    }
+    return false;
+  }
+
+  function activateAccount(account) {
+    if (!account.verifiedAt) account.verifiedAt = Date.now();
+    account.codeHash = "";
+    account.codeExpiresAt = 0;
+    account.verifyAttempts = 0;
+    if (!account.rewardGranted) {
+      account.profile.bolts = Math.min(1_000_000_000, account.profile.bolts + BONUS_BOLTS);
+      account.rewardGranted = true;
+      account.rewardGrantedAt = Date.now();
+    }
+  }
+
   function makeSession(c, account, key, ttl = 0) {
     const token = crypto.randomBytes(32).toString("hex");
     const hash = crypto.createHash("sha256").update(token).digest("hex");
@@ -196,15 +262,17 @@ function createAccounts({
       return { ok: false, code: "account_rate", message: "Too many sign-in attempts. Please wait before trying again." };
     }
     const account = key ? store.accounts.get(key) : null;
-    const storedHash = account && account.verifiedAt
-      ? account.passwordHash
-      : await DUMMY_PASSWORD_HASH;
+    const storedHash = account && account.passwordHash ? account.passwordHash : await DUMMY_PASSWORD_HASH;
     const matches = password.length <= 128 && await verifyPassword(password, storedHash);
-    if (!matches) {
-      return { ok: false, code: "account_login", message: "Email or password is incorrect, or the email is not verified." };
+    if (!account || !matches) {
+      return { ok: false, code: "account_login", message: "Email or password is incorrect." };
     }
     if (account.suspendedAt) {
       return { ok: false, code: "account_suspended", message: "This account is suspended. Contact the game administrator." };
+    }
+    if (!account.verifiedAt) {
+      activateAccount(account);
+      store.touchAccount(account);
     }
     const sessionClient = client || {};
     const ttl = remember === null ? 0 : remember ? SESSION_TTL : SESSION_ONLY_TTL;
@@ -309,49 +377,15 @@ function createAccounts({
     return { ok: true };
   }
 
-  async function sendVerification(c, account) {
-    if (!mailer || typeof mailer.sendMail !== "function") {
-      return error(c, "email_unconfigured", "Email delivery is not configured on this server.");
-    }
-    if (secret.length < 32) {
-      return error(c, "account_unconfigured", "Account verification is not configured on this server.");
-    }
-    const code = String(crypto.randomInt(100000, 1000000));
-    account.codeHash = codeHash(account.email, code);
-    account.codeExpiresAt = Date.now() + EMAIL_CODE_TTL;
-    account.verifyAttempts = 0;
-    store.touchAccount(account);
-    if (!await store.flush()) {
-      return error(c, "account_storage", "The server could not save your registration. Please try again.");
-    }
-    try {
-      const delivery = await mailer.sendMail({
-        to: account.email,
-        subject: "Your i-Pet account verification code",
-        text: `Your i-Pet Cyber Store 2096 verification code is ${code}.\n\nIt expires in 15 minutes. If you did not request this, you can ignore this email.`,
-      });
-      if (delivery && delivery.messageId) log("account verification email accepted by gateway:", delivery.messageId);
-    } catch (e) {
-      log("account email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
-      return error(c, "email_failed", "The verification email could not be sent. Please try again later.");
-    }
-    send(c, { t: "account", event: "verification_sent", email: account.email });
-  }
-
   async function register(c, m) {
     if (!canUseAccount(c)) return;
     if (c.account) return error(c, "account_signed_in", "Sign out before registering another account.");
-    if (!mailer || typeof mailer.sendMail !== "function") {
-      return error(c, "email_unconfigured", "Email delivery is not configured on this server.");
-    }
-    if (secret.length < 32) {
-      return error(c, "account_unconfigured", "Account verification is not configured on this server.");
-    }
     const email = normalizeEmail(m.email);
     const password = typeof m.password === "string" ? m.password : "";
     const profile = cleanProfile(m.profile);
-    if (!email || password.length < 10 || password.length > 128 || !profile || !c.pid) {
-      return error(c, "account_input", "Enter a valid email, a password of 10–128 characters, and connect your profile.");
+    const details = cleanRegistrationDetails(m);
+    if (!email || password.length < 10 || password.length > 128 || !profile || !c.pid || !details) {
+      return error(c, "account_input", "Enter a valid email, username, name, country, age, date of birth, and password.");
     }
     const key = emailKey(email);
     if (!limited(`register-ip:${c.ip}`, 5, 60 * 60 * 1000)
@@ -363,72 +397,67 @@ function createAccounts({
     if (linked && linked.verifiedAt) {
       return error(c, "account_profile_linked", "This profile already has an account registration in progress or completed.");
     }
-    if (linked) store.dropAccount(linked.emailKey);
     if (account && (account.verifiedAt || account.pid !== c.pid)) {
       return error(c, "account_exists", "That email cannot be registered here. Try signing in instead.");
+    }
+    if (usernameTaken(details.username, [key, linked && linked.emailKey])) {
+      return error(c, "account_username", "That username is already in use.");
     }
     const passwordHashValue = await hashPassword(password);
     linked = linkedAccount(c.pid, key);
     if (linked && linked.verifiedAt) {
       return error(c, "account_profile_linked", "This profile already has an account registration in progress or completed.");
     }
-    if (linked) store.dropAccount(linked.emailKey);
     account = store.accounts.get(key);
     if (account && (account.verifiedAt || account.pid !== c.pid)) {
       return error(c, "account_exists", "That email cannot be registered here. Try signing in instead.");
     }
+    if (usernameTaken(details.username, [key, linked && linked.emailKey])) {
+      return error(c, "account_username", "That username is already in use.");
+    }
+    const previousLinked = linked
+      ? { key: linked.emailKey, account: { ...linked, sessions: (linked.sessions || []).slice() } }
+      : null;
+    if (linked) store.dropAccount(linked.emailKey);
+    account = store.accounts.get(key);
+    const previousAccount = account ? { ...account, sessions: (account.sessions || []).slice() } : null;
     if (!account) {
       account = {
         email, emailKey: key, pid: c.pid, passwordHash: passwordHashValue, profile,
-        verifiedAt: 0, rewardGranted: false, sessions: [], createdAt: Date.now(),
+        ...details, verifiedAt: 0, rewardGranted: false, sessions: [], createdAt: Date.now(),
       };
       store.accounts.set(key, account);
     } else {
       account.passwordHash = passwordHashValue;
       account.profile = profile;
+      Object.assign(account, details);
     }
-    await sendVerification(c, account);
-  }
-
-  async function verify(c, m) {
-    if (!canUseAccount(c)) return;
-    if (secret.length < 32) return error(c, "account_unconfigured", "Account verification is not configured on this server.");
-    const email = normalizeEmail(m.email);
-    const code = typeof m.code === "string" ? m.code.trim() : "";
-    if (!email || !/^\d{6}$/.test(code)) return error(c, "account_code", "Enter the email address and its six-digit code.");
-    const key = emailKey(email);
-    if (!limited(`verify-ip:${c.ip}`, 10, 30 * 60 * 1000)
-      || !limited(`verify-email:${key}`, 8, 30 * 60 * 1000)) {
-      return error(c, "account_rate", "Too many code attempts. Request a new code later.");
-    }
-    const account = store.accounts.get(key);
-    if (!account || account.pid !== c.pid) return error(c, "account_code", "That code is invalid or expired.");
-    if (account.suspendedAt) return error(c, "account_suspended", "This account is suspended. Contact the game administrator.");
-    if (!account.verifiedAt) {
-      const expected = Buffer.from(account.codeHash || "", "hex");
-      const actual = Buffer.from(codeHash(email, code), "hex");
-      account.verifyAttempts = (account.verifyAttempts || 0) + 1;
-      const valid = expected.length === actual.length && crypto.timingSafeEqual(expected, actual)
-        && account.codeExpiresAt > Date.now() && account.verifyAttempts <= 8;
-      if (!valid) {
-        store.touchAccount(account);
-        await store.flush();
-        return error(c, "account_code", "That code is invalid or expired. You can request another code.");
-      }
-      account.verifiedAt = Date.now();
-      account.codeHash = "";
-      account.codeExpiresAt = 0;
-      if (!account.rewardGranted) {
-        account.profile.bolts = Math.min(1_000_000_000, account.profile.bolts + BONUS_BOLTS);
-        account.rewardGranted = true;
-        account.rewardGrantedAt = Date.now();
-      }
-    }
+    activateAccount(account);
+    store.touchAccount(account);
     const token = makeSession(c, account, key);
-    if (!await store.flush()) return error(c, "account_storage", "Your account could not be saved. Please sign in and try again.");
+    if (!await store.flush()) {
+      const sessionHash = crypto.createHash("sha256").update(token).digest("hex");
+      sessionIndex.delete(sessionHash);
+      c.account = null;
+      c.accountToken = "";
+      c.accountExpiresAt = 0;
+      c.pid = c.localPid || c.pid;
+      if (previousAccount) {
+        Object.assign(account, previousAccount);
+        store.accounts.set(key, account);
+        store.touchAccount(account);
+      } else {
+        store.dropAccount(key);
+      }
+      if (previousLinked) {
+        store.accounts.set(previousLinked.key, previousLinked.account);
+        store.touchAccount(previousLinked.account);
+      }
+      return error(c, "account_storage", "Your account could not be saved. Please try again.");
+    }
     send(c, {
-      t: "account", event: "verified", email, token, profile: account.profile,
-      profile_revision: getProfileRevision(account), reward: BONUS_BOLTS,
+      t: "account", event: "signed_in", email, token, profile: account.profile,
+      profile_revision: getProfileRevision(account), new_account: true, reward: BONUS_BOLTS,
     });
   }
 
@@ -491,9 +520,10 @@ function createAccounts({
     const profile = account.profile && typeof account.profile === "object" ? account.profile : {};
     const view = {
       email: account.email,
+      username: String(account.username || ""),
       pid: account.pid,
-      verified: Boolean(account.verifiedAt),
-      verifiedAt: Number(account.verifiedAt) || 0,
+      active: Boolean(account.verifiedAt),
+      activatedAt: Number(account.verifiedAt) || 0,
       suspendedAt: Number(account.suspendedAt) || 0,
       createdAt: Number(account.createdAt) || 0,
       profileUpdatedAt: Number(account.profileUpdatedAt) || 0,
@@ -503,7 +533,14 @@ function createAccounts({
       bolts: Number(profile.bolts) || 0,
       species: Number(profile.species) || 0,
     };
-    if (includeProfile) view.profile = profile;
+    if (includeProfile) {
+      view.profile = profile;
+      view.firstName = String(account.firstName || "");
+      view.surname = String(account.surname || "");
+      view.country = String(account.country || "");
+      view.age = Number.isSafeInteger(account.age) ? account.age : null;
+      view.dateOfBirth = String(account.dateOfBirth || "");
+    }
     return view;
   }
 
@@ -551,6 +588,7 @@ function createAccounts({
     const matches = [...store.accounts.values()]
       .filter((account) => !query
         || String(account.email || "").toLowerCase().includes(query)
+        || String(account.username || "").toLowerCase().includes(query)
         || String(account.pid || "").toLowerCase().includes(query))
       .sort((a, b) => String(a.email || "").localeCompare(String(b.email || "")));
     const total = matches.length;
@@ -653,7 +691,6 @@ function createAccounts({
 
   const handlers = {
     account_register: register,
-    account_verify: verify,
     account_login: login,
     account_sync: sync,
     account_logout: logout,
