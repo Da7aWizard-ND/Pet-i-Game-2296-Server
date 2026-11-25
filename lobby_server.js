@@ -423,7 +423,8 @@ const handlers = {
     const account = accounts ? accounts.restoreSession(c, m.account_token) : null;
     send(c, { t: "welcome", id: c.id, tag: c.tag, protocol: PROTOCOL, max_players: MAX_PLAYERS, quick_count: QUICK_CHAT_COUNT,
       profile: social.profile(c), cfg: config.current(), cfg_updated: config.updated(),
-      account: account ? { email: account.email } : null, account_profile: account ? account.profile : null });
+      account: account ? { email: account.email } : null, account_profile: account ? account.profile : null,
+      account_profile_revision: account ? account.profileRevision : 0 });
   },
 
   create(c, m) {
@@ -758,9 +759,9 @@ async function main() {
   Object.assign(handlers, createCodes({ store, send, error, log, playerOf: social.playerOf }).handlers);
   config = createConfig({ store, clients, send, error, log });
   Object.assign(handlers, config.handlers);
-  const mailer = process.env.NODE_ENV === "test" ? null : { sendMail: sendEmail };
+  const mailer = { sendMail: sendEmail };
   accounts = createAccounts({
-    store, send, error, log, mailer,
+    store, clients, send, error, log, mailer,
     secret: process.env.ACCOUNT_SECRET || "",
     onPasswordReset(accountKey) {
       for (const client of clients.values()) {

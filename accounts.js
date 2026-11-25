@@ -85,11 +85,12 @@ async function verifyPassword(password, stored) {
 }
 
 function createAccounts({
-  store, send, error, log = console.log, mailer = null, secret = "",
+  store, clients = new Map(), send, error, log = console.log, mailer = null, secret = "",
   onPasswordReset = () => {},
 }) {
   const sessionIndex = new Map();
   const limits = new Map();
+  const ADMIN_USER_PAGE_SIZE = 25;
   for (const [key, account] of store.accounts) {
     for (const session of account.sessions || []) sessionIndex.set(session.hash, key);
   }
@@ -147,13 +148,18 @@ function createAccounts({
     return token;
   }
 
+  function getProfileRevision(account) {
+    return Number.isSafeInteger(account.profileRevision) && account.profileRevision >= 0
+      ? account.profileRevision : 0;
+  }
+
   function accountForSession(token, secure) {
     if (!secure || typeof token !== "string" || !/^[a-f0-9]{64}$/i.test(token)) return null;
     const hash = crypto.createHash("sha256").update(token).digest("hex");
     const key = sessionIndex.get(hash);
     const account = key ? store.accounts.get(key) : null;
     const session = account && (account.sessions || []).find((item) => item.hash === hash);
-    if (!account || !account.verifiedAt || !session) {
+    if (!account || !account.verifiedAt || account.suspendedAt || !session) {
       sessionIndex.delete(hash);
       return null;
     }
@@ -163,7 +169,10 @@ function createAccounts({
       store.touchAccount(account);
       return null;
     }
-    return { key, email: account.email, pid: account.pid, profile: account.profile };
+    return {
+      key, email: account.email, pid: account.pid, profile: account.profile,
+      profileRevision: getProfileRevision(account),
+    };
   }
 
   function restoreSession(c, token) {
@@ -172,7 +181,7 @@ function createAccounts({
     c.account = session.key;
     c.accountToken = token;
     c.pid = session.pid;
-    return { email: session.email, profile: session.profile };
+    return { email: session.email, profile: session.profile, profileRevision: session.profileRevision };
   }
 
   async function authenticate(emailValue, passwordValue, { secure, ip, client = null, remember = null } = {}) {
@@ -194,13 +203,19 @@ function createAccounts({
     if (!matches) {
       return { ok: false, code: "account_login", message: "Email or password is incorrect, or the email is not verified." };
     }
+    if (account.suspendedAt) {
+      return { ok: false, code: "account_suspended", message: "This account is suspended. Contact the game administrator." };
+    }
     const sessionClient = client || {};
     const ttl = remember === null ? 0 : remember ? SESSION_TTL : SESSION_ONLY_TTL;
     const token = makeSession(sessionClient, account, key, ttl);
     if (!await store.flush()) {
       return { ok: false, code: "account_storage", message: "Your sign-in could not be saved. Please try again." };
     }
-    return { ok: true, email, token, expiresAt: sessionClient.accountExpiresAt, profile: account.profile };
+    return {
+      ok: true, email, token, expiresAt: sessionClient.accountExpiresAt, profile: account.profile,
+      profileRevision: getProfileRevision(account),
+    };
   }
 
   async function revokeSession(token, secure) {
@@ -239,11 +254,12 @@ function createAccounts({
     store.touchAccount(account);
     if (!await store.flush()) return { ok: false, code: "account_storage" };
     try {
-      await mailer.sendMail({
+      const delivery = await mailer.sendMail({
         to: email,
         subject: "Reset your i-Pet account password",
         text: `Your i-Pet Cyber Store 2096 password reset code is ${code}.\n\nIt expires in 15 minutes. If you did not request this, you can ignore this email.`,
       });
+      if (delivery && delivery.messageId) log("password reset email accepted by gateway:", delivery.messageId);
     } catch (e) {
       log("password reset email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
       return { ok: false, code: "email_failed" };
@@ -309,11 +325,12 @@ function createAccounts({
       return error(c, "account_storage", "The server could not save your registration. Please try again.");
     }
     try {
-      await mailer.sendMail({
+      const delivery = await mailer.sendMail({
         to: account.email,
         subject: "Your i-Pet account verification code",
         text: `Your i-Pet Cyber Store 2096 verification code is ${code}.\n\nIt expires in 15 minutes. If you did not request this, you can ignore this email.`,
       });
+      if (delivery && delivery.messageId) log("account verification email accepted by gateway:", delivery.messageId);
     } catch (e) {
       log("account email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
       return error(c, "email_failed", "The verification email could not be sent. Please try again later.");
@@ -386,6 +403,7 @@ function createAccounts({
     }
     const account = store.accounts.get(key);
     if (!account || account.pid !== c.pid) return error(c, "account_code", "That code is invalid or expired.");
+    if (account.suspendedAt) return error(c, "account_suspended", "This account is suspended. Contact the game administrator.");
     if (!account.verifiedAt) {
       const expected = Buffer.from(account.codeHash || "", "hex");
       const actual = Buffer.from(codeHash(email, code), "hex");
@@ -408,7 +426,10 @@ function createAccounts({
     }
     const token = makeSession(c, account, key);
     if (!await store.flush()) return error(c, "account_storage", "Your account could not be saved. Please sign in and try again.");
-    send(c, { t: "account", event: "verified", email, token, profile: account.profile, reward: BONUS_BOLTS });
+    send(c, {
+      t: "account", event: "verified", email, token, profile: account.profile,
+      profile_revision: getProfileRevision(account), reward: BONUS_BOLTS,
+    });
   }
 
   async function login(c, m) {
@@ -416,7 +437,10 @@ function createAccounts({
     if (c.account) return error(c, "account_signed_in", "You are already signed in.");
     const result = await authenticate(m.email, m.password, { secure: c.secure, ip: c.ip, client: c });
     if (!result.ok) return error(c, result.code, result.message);
-    send(c, { t: "account", event: "signed_in", email: result.email, token: result.token, profile: result.profile });
+    send(c, {
+      t: "account", event: "signed_in", email: result.email, token: result.token,
+      profile: result.profile, profile_revision: result.profileRevision,
+    });
   }
 
   async function sync(c, m) {
@@ -430,6 +454,16 @@ function createAccounts({
     }
     const profile = cleanProfile(m.profile);
     if (!profile) return error(c, "account_profile", "The saved profile could not be synced.");
+    const profileRevision = getProfileRevision(account);
+    const submittedRevision = Number.isSafeInteger(m.profile_revision) && m.profile_revision >= 0
+      ? m.profile_revision : 0;
+    if (submittedRevision !== profileRevision) {
+      send(c, {
+        t: "account", event: "profile_admin_updated",
+        profile: account.profile, profile_revision: profileRevision,
+      });
+      return error(c, "account_sync_revision", "The server profile changed. The latest profile is being restored.");
+    }
     account.profile = profile;
     account.profileUpdatedAt = Date.now();
     store.touchAccount(account);
@@ -453,12 +487,181 @@ function createAccounts({
     send(c, { t: "account", event: "signed_out" });
   }
 
+  function adminUserView(account, includeProfile = false) {
+    const profile = account.profile && typeof account.profile === "object" ? account.profile : {};
+    const view = {
+      email: account.email,
+      pid: account.pid,
+      verified: Boolean(account.verifiedAt),
+      verifiedAt: Number(account.verifiedAt) || 0,
+      suspendedAt: Number(account.suspendedAt) || 0,
+      createdAt: Number(account.createdAt) || 0,
+      profileUpdatedAt: Number(account.profileUpdatedAt) || 0,
+      profileRevision: getProfileRevision(account),
+      rewardGranted: Boolean(account.rewardGranted),
+      sessionCount: Array.isArray(account.sessions) ? account.sessions.length : 0,
+      bolts: Number(profile.bolts) || 0,
+      species: Number(profile.species) || 0,
+    };
+    if (includeProfile) view.profile = profile;
+    return view;
+  }
+
+  function requireAdmin(c) {
+    if (c.admin) return true;
+    error(c, "admin", "Not allowed.");
+    return false;
+  }
+
+  function accountForAdmin(c, emailValue) {
+    if (!requireAdmin(c)) return null;
+    const email = normalizeEmail(emailValue);
+    if (!email) {
+      error(c, "admin_user_input", "Enter a valid account email address.");
+      return null;
+    }
+    const key = emailKey(email);
+    const account = store.accounts.get(key);
+    if (!account) {
+      error(c, "admin_user_missing", "That user account was not found.");
+      return null;
+    }
+    return { key, account };
+  }
+
+  function signOutAccountClients(key) {
+    for (const client of clients.values()) {
+      if (client.account !== key) continue;
+      client.account = null;
+      client.accountToken = "";
+      client.accountExpiresAt = 0;
+      client.pid = client.localPid || client.pid;
+      send(client, { t: "account", event: "signed_out" });
+    }
+  }
+
+  function revokeAccountSessions(account) {
+    for (const session of account.sessions || []) sessionIndex.delete(session.hash);
+    account.sessions = [];
+  }
+
+  async function adminUserList(c, m) {
+    if (!requireAdmin(c)) return;
+    const query = typeof m.query === "string" ? m.query.trim().toLowerCase().slice(0, 128) : "";
+    const matches = [...store.accounts.values()]
+      .filter((account) => !query
+        || String(account.email || "").toLowerCase().includes(query)
+        || String(account.pid || "").toLowerCase().includes(query))
+      .sort((a, b) => String(a.email || "").localeCompare(String(b.email || "")));
+    const total = matches.length;
+    const lastPage = Math.max(0, Math.ceil(total / ADMIN_USER_PAGE_SIZE) - 1);
+    const page = Math.min(Number.isSafeInteger(m.page) ? Math.max(0, m.page) : 0, lastPage);
+    const users = matches.slice(page * ADMIN_USER_PAGE_SIZE, (page + 1) * ADMIN_USER_PAGE_SIZE)
+      .map((account) => adminUserView(account));
+    send(c, { t: "admin_users", action: "list", query, page, page_size: ADMIN_USER_PAGE_SIZE, total, users });
+  }
+
+  function adminUserGet(c, m) {
+    const found = accountForAdmin(c, m.email);
+    if (!found) return;
+    send(c, { t: "admin_users", action: "detail", user: adminUserView(found.account, true) });
+  }
+
+  async function adminUserUpdate(c, m) {
+    const found = accountForAdmin(c, m.email);
+    if (!found) return;
+    const profile = cleanProfile(m.profile);
+    if (!profile) return error(c, "admin_user_profile", "That profile is invalid.");
+    const previousProfile = found.account.profile;
+    const previousUpdatedAt = found.account.profileUpdatedAt;
+    const previousRevision = found.account.profileRevision;
+    found.account.profile = profile;
+    found.account.profileUpdatedAt = Date.now();
+    found.account.profileRevision = getProfileRevision(found.account) + 1;
+    store.touchAccount(found.account);
+    if (!await store.flush()) {
+      found.account.profile = previousProfile;
+      if (previousUpdatedAt === undefined) delete found.account.profileUpdatedAt;
+      else found.account.profileUpdatedAt = previousUpdatedAt;
+      if (previousRevision === undefined) delete found.account.profileRevision;
+      else found.account.profileRevision = previousRevision;
+      store.touchAccount(found.account);
+      return error(c, "admin_user_storage", "The profile could not be saved. Please try again.");
+    }
+    for (const client of clients.values()) {
+      if (client.account === found.key) {
+        send(client, {
+          t: "account", event: "profile_admin_updated",
+          profile, profile_revision: found.account.profileRevision,
+        });
+      }
+    }
+    log(`admin ${c.tag} updated profile for player ${found.account.pid}`);
+    send(c, { t: "admin_users", action: "updated", user: adminUserView(found.account, true) });
+  }
+
+  async function adminUserSuspend(c, m) {
+    const found = accountForAdmin(c, m.email);
+    if (!found) return;
+    if (typeof m.suspended !== "boolean") {
+      return error(c, "admin_user_input", "Choose whether to suspend this account.");
+    }
+    if (m.suspended && c.account === found.key) {
+      return error(c, "admin_user_self", "You cannot suspend your own account.");
+    }
+    const account = found.account;
+    const previousSuspendedAt = account.suspendedAt;
+    const previousSessions = Array.isArray(account.sessions) ? account.sessions.slice() : [];
+    if (m.suspended) {
+      account.suspendedAt = Date.now();
+      account.sessions = [];
+    } else {
+      delete account.suspendedAt;
+    }
+    store.touchAccount(account);
+    if (!await store.flush()) {
+      if (previousSuspendedAt === undefined) delete account.suspendedAt;
+      else account.suspendedAt = previousSuspendedAt;
+      account.sessions = previousSessions;
+      store.touchAccount(account);
+      return error(c, "admin_user_storage", "The account status could not be saved. Please try again.");
+    }
+    if (m.suspended) {
+      for (const session of previousSessions) sessionIndex.delete(session.hash);
+      signOutAccountClients(found.key);
+    }
+    log(`admin ${c.tag} ${m.suspended ? "suspended" : "restored"} player ${account.pid}`);
+    send(c, { t: "admin_users", action: "status", user: adminUserView(account) });
+  }
+
+  async function adminUserDelete(c, m) {
+    const found = accountForAdmin(c, m.email);
+    if (!found) return;
+    if (c.account === found.key) return error(c, "admin_user_self", "You cannot delete your own account.");
+    const account = found.account;
+    store.dropAccount(found.key);
+    if (!await store.flush()) {
+      store.accounts.set(found.key, account);
+      store.touchAccount(account);
+      return error(c, "admin_user_storage", "The account could not be deleted. Please try again.");
+    }
+    revokeAccountSessions(account);
+    signOutAccountClients(found.key);
+    log(`admin ${c.tag} deleted account for player ${account.pid}`);
+    send(c, { t: "admin_users", action: "deleted", email: account.email, pid: account.pid });
+  }
+
   const handlers = {
     account_register: register,
     account_verify: verify,
     account_login: login,
     account_sync: sync,
     account_logout: logout,
+    admin_user_list: adminUserList,
+    admin_user_get: adminUserGet,
+    admin_user_update: adminUserUpdate,
+    admin_user_suspend: adminUserSuspend,
+    admin_user_delete: adminUserDelete,
   };
 
   return {
