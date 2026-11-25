@@ -40,13 +40,15 @@ Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 
 ## Email accounts and profile sync
 
-The in-game Account page creates an account using an email address, unique
-username, first name, surname, country, age and date of birth. Email ownership
-is not confirmed during registration and no code is sent; users should enter
-an address they can access for password recovery. New accounts receive 250
-bolts once. Registered gameplay progress—including bolts, wardrobe, special
-items, challenges, badges and stats—is stored on the server and synced when
-online. Device preferences remain local.
+The website and in-game Account page can create an account using an email
+address, unique username, first name, surname, country, age and date of birth.
+Email ownership is not confirmed during registration and no code is sent; users
+should enter an address they can access for password recovery. New accounts
+receive 250 bolts once. A website-created account links the existing local game
+profile on the first sign-in from the updated game client. Registered gameplay
+progress—including bolts, wardrobe, special items, challenges, badges and
+stats—is stored on the server and synced when online. Device preferences
+remain local.
 Device preferences remain local.
 
 The website's **Sign in** button uses the same email and password.
@@ -65,7 +67,8 @@ This email gateway is available only inside GoDaddy Node.js Hosting. Local
 development and the Ubuntu `setup_server.sh` deployment cannot send account
 emails through it; those deployments need an email-gateway adapter available
 on their own host. Account registration and sign-in require a secure `wss://`
-connection outside localhost.
+connection outside localhost. Website account actions use HTTPS; game account
+actions use WSS.
 
 ## Files
 

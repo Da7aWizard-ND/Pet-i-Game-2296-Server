@@ -250,7 +250,9 @@ function createAccounts({
     return { email: session.email, profile: session.profile, profileRevision: session.profileRevision };
   }
 
-  async function authenticate(emailValue, passwordValue, { secure, ip, client = null, remember = null } = {}) {
+  async function authenticate(emailValue, passwordValue, {
+    secure, ip, client = null, remember = null, profileValue = null,
+  } = {}) {
     if (!secure) {
       return { ok: false, code: "account_secure", message: "Account actions need a secure connection." };
     }
@@ -270,14 +272,72 @@ function createAccounts({
     if (account.suspendedAt) {
       return { ok: false, code: "account_suspended", message: "This account is suspended. Contact the game administrator." };
     }
+    let profileLink = null;
+    if (client && account.websiteRegistrationPending) {
+      const pid = typeof client.localPid === "string" && client.localPid
+        ? client.localPid : typeof client.pid === "string" ? client.pid : "";
+      const profile = cleanProfile(profileValue);
+      if (!pid || !profile) {
+        return {
+          ok: false,
+          code: "account_profile",
+          message: "Update the game before signing in so your local profile can be linked safely.",
+        };
+      }
+      if (linkedAccount(pid, key)) {
+        return {
+          ok: false,
+          code: "account_profile_linked",
+          message: "This game profile is already linked to another account.",
+        };
+      }
+      profileLink = {
+        pid: account.pid,
+        profile: account.profile,
+        profileRevision: account.profileRevision,
+        profileUpdatedAt: account.profileUpdatedAt,
+        websiteRegistrationPending: account.websiteRegistrationPending,
+      };
+      profile.bolts = Math.min(1_000_000_000, profile.bolts + BONUS_BOLTS);
+      account.pid = pid;
+      account.profile = profile;
+      account.profileRevision = 0;
+      account.profileUpdatedAt = Date.now();
+      account.websiteRegistrationPending = false;
+    }
     if (!account.verifiedAt) {
       activateAccount(account);
       store.touchAccount(account);
     }
     const sessionClient = client || {};
     const ttl = remember === null ? 0 : remember ? SESSION_TTL : SESSION_ONLY_TTL;
+    const previousSessions = (account.sessions || []).slice();
+    const previousClientState = client ? {
+      account: client.account,
+      accountToken: client.accountToken,
+      accountExpiresAt: client.accountExpiresAt,
+      pid: client.pid,
+    } : null;
     const token = makeSession(sessionClient, account, key, ttl);
     if (!await store.flush()) {
+      sessionIndex.delete(crypto.createHash("sha256").update(token).digest("hex"));
+      account.sessions = previousSessions;
+      if (profileLink) {
+        account.pid = profileLink.pid;
+        account.profile = profileLink.profile;
+        if (profileLink.profileRevision === undefined) delete account.profileRevision;
+        else account.profileRevision = profileLink.profileRevision;
+        if (profileLink.profileUpdatedAt === undefined) delete account.profileUpdatedAt;
+        else account.profileUpdatedAt = profileLink.profileUpdatedAt;
+        account.websiteRegistrationPending = profileLink.websiteRegistrationPending;
+      }
+      if (previousClientState) {
+        for (const [field, value] of Object.entries(previousClientState)) {
+          if (value === undefined) delete client[field];
+          else client[field] = value;
+        }
+      }
+      store.touchAccount(account);
       return { ok: false, code: "account_storage", message: "Your sign-in could not be saved. Please try again." };
     }
     return {
@@ -471,10 +531,72 @@ function createAccounts({
     });
   }
 
+  async function registerWebsite(m, { secure, ip, remember = false } = {}) {
+    if (!secure) {
+      return { ok: false, code: "account_secure", message: "Account actions need a secure connection." };
+    }
+    const email = normalizeEmail(m.email);
+    const password = typeof m.password === "string" ? m.password : "";
+    const details = cleanRegistrationDetails(m);
+    if (!email) return { ok: false, code: "account_input", message: "Enter a valid email address." };
+    if (password.length < 10 || password.length > 128) {
+      return { ok: false, code: "account_input", message: "Password must be between 10 and 128 characters." };
+    }
+    if (!details) {
+      return {
+        ok: false,
+        code: "account_input",
+        message: "Check your username, names, country, age, and date of birth. Age must match date of birth.",
+      };
+    }
+    const key = emailKey(email);
+    if (!limited(`register-ip:${ip}`, 5, 60 * 60 * 1000)
+      || !limited(`register-email:${key}`, 3, 60 * 60 * 1000)) {
+      return { ok: false, code: "account_rate", message: "Too many registration attempts. Please wait before trying again." };
+    }
+    if (store.accounts.has(key)) {
+      return { ok: false, code: "account_exists", message: "An account with this email already exists. Sign in instead." };
+    }
+    if (usernameTaken(details.username)) {
+      return { ok: false, code: "account_username", message: "That username is already in use." };
+    }
+
+    const passwordHashValue = await hashPassword(password);
+    if (store.accounts.has(key)) {
+      return { ok: false, code: "account_exists", message: "An account with this email already exists. Sign in instead." };
+    }
+    if (usernameTaken(details.username)) {
+      return { ok: false, code: "account_username", message: "That username is already in use." };
+    }
+
+    let pid;
+    do {
+      pid = crypto.randomBytes(12).toString("hex");
+    } while ((store.players && store.players.has(pid)) || linkedAccount(pid));
+    const account = {
+      email, emailKey: key, pid, passwordHash: passwordHashValue,
+      profile: { version: 1, species: 0, bolts: BONUS_BOLTS },
+      ...details, verifiedAt: Date.now(), rewardGranted: true, sessions: [], createdAt: Date.now(),
+      websiteRegistrationPending: true,
+    };
+    store.accounts.set(key, account);
+    const sessionClient = {};
+    const ttl = remember ? SESSION_TTL : SESSION_ONLY_TTL;
+    const token = makeSession(sessionClient, account, key, ttl);
+    if (!await store.flush()) {
+      sessionIndex.delete(crypto.createHash("sha256").update(token).digest("hex"));
+      store.dropAccount(key);
+      return { ok: false, code: "account_storage", message: "Your account could not be saved. Please try again." };
+    }
+    return { ok: true, email, token, expiresAt: sessionClient.accountExpiresAt };
+  }
+
   async function login(c, m) {
     if (!canUseAccount(c)) return;
     if (c.account) return error(c, "account_signed_in", "You are already signed in.");
-    const result = await authenticate(m.email, m.password, { secure: c.secure, ip: c.ip, client: c });
+    const result = await authenticate(m.email, m.password, {
+      secure: c.secure, ip: c.ip, client: c, profileValue: m.profile,
+    });
     if (!result.ok) return error(c, result.code, result.message);
     send(c, {
       t: "account", event: "signed_in", email: result.email, token: result.token,
@@ -713,7 +835,7 @@ function createAccounts({
 
   return {
     handlers, restoreSession, authenticate, accountForSession, revokeSession,
-    requestPasswordReset, resetPassword,
+    requestPasswordReset, resetPassword, registerWebsite,
   };
 }
 

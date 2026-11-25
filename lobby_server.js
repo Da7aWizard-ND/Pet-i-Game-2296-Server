@@ -198,7 +198,7 @@ async function handleAccountApi(req, res, pathname) {
     });
   }
 
-  if (!["/api/login", "/api/logout", "/api/password-reset/request", "/api/password-reset/confirm"].includes(pathname)) {
+  if (!["/api/register", "/api/login", "/api/logout", "/api/password-reset/request", "/api/password-reset/confirm"].includes(pathname)) {
     return accountApiError(res, 404, "Not found.");
   }
   if (req.method !== "POST") {
@@ -217,6 +217,22 @@ async function handleAccountApi(req, res, pathname) {
   } catch (e) {
     return accountApiError(res, e.statusCode || 400,
       e.statusCode === 413 ? "Request is too large." : "Send a valid JSON request.");
+  }
+
+  if (pathname === "/api/register") {
+    const result = await accounts.registerWebsite(body, {
+      secure, ip: requestIp(req), remember: body.remember === true,
+    });
+    if (!result.ok) {
+      const status = result.code === "account_secure" ? 403
+        : result.code === "account_rate" ? 429
+          : result.code === "account_storage" ? 503
+            : result.code === "account_exists" || result.code === "account_username" ? 409 : 400;
+      return accountApiError(res, status, result.message || "Your account could not be created.");
+    }
+    const maxAge = Math.max(0, Math.floor((result.expiresAt - Date.now()) / 1000));
+    const cookie = `${ACCOUNT_COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Strict${body.remember === true ? `; Max-Age=${Math.min(maxAge, ACCOUNT_SESSION_TTL_SECONDS)}` : ""}${https ? "; Secure" : ""}`;
+    return jsonResponse(res, 200, { authenticated: true, email: result.email }, { "set-cookie": cookie });
   }
 
   if (pathname === "/api/login") {
