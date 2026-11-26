@@ -15,6 +15,7 @@
 // Health check: GET / returns "i-Pet Cyber Store 2096 lobby OK".
 
 "use strict";
+const crypto = require("crypto");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -59,6 +60,9 @@ const QUICK_CHAT_COUNT = 12;
 const ACCOUNT_COOKIE = "peti_session";
 const ACCOUNT_BODY_LIMIT = 8 * 1024;
 const ACCOUNT_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+const EMAIL_TEST_LIMIT = 3;
+const EMAIL_TEST_WINDOW_MS = 60 * 60 * 1000;
+const emailTestLimits = new Map();
 
 // Match settings the host may change, with what's allowed.
 const SETTING_RULES = {
@@ -291,6 +295,65 @@ async function handleAccountApi(req, res, pathname) {
     return accountApiError(res, status, message);
   }
   return jsonResponse(res, 200, { ok: true, message: "Password updated. Sign in with your new password." });
+}
+
+async function handleEmailTestApi(req, res) {
+  if (req.method !== "POST") {
+    res.writeHead(405, { allow: "POST", "cache-control": "no-store" });
+    res.end();
+    return;
+  }
+  if (!requestIsSecure(req)) return accountApiError(res, 403, "Use the secure website to send a test email.");
+  if (!sameOriginRequest(req)) return accountApiError(res, 403, "This request could not be verified.");
+
+  const configuredToken = process.env.EMAIL_TEST_TOKEN || "";
+  const recipient = String(process.env.EMAIL_TEST_RECIPIENT || "").trim();
+  if (configuredToken.length < 32 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+    return accountApiError(res, 503, "Test email is not configured on the server.");
+  }
+
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (e) {
+    return accountApiError(res, e.statusCode || 400,
+      e.statusCode === 413 ? "Request is too large." : "Send a valid JSON request.");
+  }
+
+  const suppliedToken = typeof body.token === "string" ? body.token : "";
+  const expected = Buffer.from(configuredToken, "utf8");
+  const supplied = Buffer.from(suppliedToken, "utf8");
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
+    return accountApiError(res, 401, "The test sender access key is invalid.");
+  }
+
+  const ip = requestIp(req) || "unknown";
+  const now = Date.now();
+  let limit = emailTestLimits.get(ip);
+  if (!limit || limit.until <= now) {
+    limit = { count: 0, until: now + EMAIL_TEST_WINDOW_MS };
+    emailTestLimits.set(ip, limit);
+  }
+  if (limit.count >= EMAIL_TEST_LIMIT) {
+    return accountApiError(res, 429, "Test email limit reached. Try again later.");
+  }
+  limit.count++;
+  if (emailTestLimits.size > 10000) {
+    for (const [key, value] of emailTestLimits) if (value.until <= now) emailTestLimits.delete(key);
+  }
+
+  try {
+    const delivery = await sendEmail({
+      to: recipient,
+      subject: "i-Pet Cyber Store 2096 email gateway test",
+      text: `This is a test message from the i-Pet Cyber Store 2096 website.\n\nThe email gateway accepted this message at ${new Date().toISOString()}.`,
+    });
+    log("test email accepted by gateway:", delivery.messageId);
+    return jsonResponse(res, 200, { ok: true, message: "Test email sent to the configured test address." });
+  } catch (e) {
+    log("test email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
+    return accountApiError(res, 502, "The email gateway could not send the test message.");
+  }
 }
 
 // Paw Points, leaderboards and Packs (see social.js); saved by store.js.
@@ -640,6 +703,14 @@ function applySettings(room, s) {
 
 const server = http.createServer((req, res) => {
   const requestPath = req.url && req.url.split("?")[0].replace(/\/+$/, "");
+  if (requestPath === "/api/test-email") {
+    handleEmailTestApi(req, res).catch((e) => {
+      log("test email handler error:", e && e.message ? e.message : "unknown_error");
+      if (!res.headersSent) accountApiError(res, 500, "The request could not be completed. Please try again.");
+      else res.destroy();
+    });
+    return;
+  }
   if (requestPath && requestPath.startsWith("/api/")) {
     handleAccountApi(req, res, requestPath).catch((e) => {
       log("account HTTP handler error:", e && e.message ? e.message : "unknown_error");
