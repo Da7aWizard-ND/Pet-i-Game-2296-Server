@@ -59,9 +59,6 @@ const QUICK_CHAT_COUNT = 12;
 const ACCOUNT_COOKIE = "peti_session";
 const ACCOUNT_BODY_LIMIT = 8 * 1024;
 const ACCOUNT_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const EMAIL_TEST_LIMIT = 3;
-const EMAIL_TEST_WINDOW_MS = 60 * 60 * 1000;
-const emailTestLimits = new Map();
 
 // Match settings the host may change, with what's allowed.
 const SETTING_RULES = {
@@ -169,8 +166,8 @@ function readJsonBody(req) {
   });
 }
 
-function accountApiError(res, status, message) {
-  jsonResponse(res, status, { error: message });
+function accountApiError(res, status, message, code = "") {
+  jsonResponse(res, status, { error: message, ...(code ? { code } : {}) });
 }
 
 async function handleAccountApi(req, res, pathname) {
@@ -201,7 +198,7 @@ async function handleAccountApi(req, res, pathname) {
     });
   }
 
-  if (!["/api/register", "/api/login", "/api/logout", "/api/password-reset/request", "/api/password-reset/confirm"].includes(pathname)) {
+  if (!["/api/register", "/api/register/verify", "/api/register/resend", "/api/login", "/api/logout", "/api/password-reset/request", "/api/password-reset/confirm"].includes(pathname)) {
     return accountApiError(res, 404, "Not found.");
   }
   if (req.method !== "POST") {
@@ -229,9 +226,59 @@ async function handleAccountApi(req, res, pathname) {
     if (!result.ok) {
       const status = result.code === "account_secure" ? 403
         : result.code === "account_rate" ? 429
-          : result.code === "account_storage" ? 503
+          : result.code === "account_storage" || result.code === "account_unconfigured" ? 503
             : result.code === "account_exists" || result.code === "account_username" ? 409 : 400;
-      return accountApiError(res, status, result.message || "Your account could not be created.");
+      return accountApiError(res, status, result.message || "Your account could not be created.", result.code);
+    }
+    return jsonResponse(res, 200, {
+      verificationRequired: true,
+      email: result.email,
+      deliveryFailed: result.deliveryFailed,
+      message: result.deliveryFailed
+        ? "Your account is saved, but the verification email could not be sent. Resend the code to try again."
+        : "We sent a six-digit verification code to your email. Enter it to activate your account.",
+    });
+  }
+
+  if (pathname === "/api/register/resend") {
+    const result = await accounts.requestEmailVerification(body.email, { secure, ip: requestIp(req) });
+    if (!result.ok) {
+      const status = result.code === "account_secure" ? 403
+        : result.code === "account_rate" ? 429
+          : result.code === "account_storage" ? 503
+            : result.code === "account_unconfigured" ? 503
+              : result.code === "account_verify_input" ? 400 : 502;
+      const message = result.code === "account_rate"
+        ? "Too many verification emails. Please wait before trying again."
+        : result.code === "account_unconfigured"
+          ? "Email verification is unavailable. Please contact the server owner."
+          : result.code === "account_verify_input"
+            ? "Enter a valid email address."
+            : "The verification email could not be sent. Please try again.";
+      return accountApiError(res, status, message, result.code);
+    }
+    return jsonResponse(res, 200, {
+      ok: true,
+      message: "If that email has a pending registration, a new code will be sent.",
+    });
+  }
+
+  if (pathname === "/api/register/verify") {
+    const result = await accounts.verifyWebsiteRegistration(body.email, body.code, {
+      secure, ip: requestIp(req), remember: body.remember === true,
+    });
+    if (!result.ok) {
+      const status = result.code === "account_secure" ? 403
+        : result.code === "account_rate" ? 429
+          : result.code === "account_storage" ? 503 : 400;
+      const message = result.code === "account_rate"
+        ? "Too many verification attempts. Please wait before trying again."
+        : result.code === "account_storage"
+          ? "Verification succeeded, but sign-in could not be saved. Please sign in."
+          : result.code === "account_verify_input"
+            ? "Enter the six-digit code from your email."
+            : "The code is incorrect or expired. Request a new code and try again.";
+      return accountApiError(res, status, message, result.code);
     }
     const maxAge = Math.max(0, Math.floor((result.expiresAt - Date.now()) / 1000));
     const cookie = `${ACCOUNT_COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Strict${body.remember === true ? `; Max-Age=${Math.min(maxAge, ACCOUNT_SESSION_TTL_SECONDS)}` : ""}${https ? "; Secure" : ""}`;
@@ -245,8 +292,9 @@ async function handleAccountApi(req, res, pathname) {
     if (!result.ok) {
       const status = result.code === "account_secure" ? 403
         : result.code === "account_rate" ? 429
-          : result.code === "account_storage" ? 503 : 401;
-      return accountApiError(res, status, result.message || "Email or password is incorrect.");
+          : result.code === "account_storage" ? 503
+            : result.code === "account_unverified" ? 403 : 401;
+      return accountApiError(res, status, result.message || "Email or password is incorrect.", result.code);
     }
     const maxAge = Math.max(0, Math.floor((result.expiresAt - Date.now()) / 1000));
     const cookie = `${ACCOUNT_COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Strict${body.remember === true ? `; Max-Age=${Math.min(maxAge, ACCOUNT_SESSION_TTL_SECONDS)}` : ""}${https ? "; Secure" : ""}`;
@@ -294,62 +342,6 @@ async function handleAccountApi(req, res, pathname) {
     return accountApiError(res, status, message);
   }
   return jsonResponse(res, 200, { ok: true, message: "Password updated. Sign in with your new password." });
-}
-
-async function handleEmailTestApi(req, res) {
-  if (req.method !== "POST") {
-    res.writeHead(405, { allow: "POST", "cache-control": "no-store" });
-    res.end();
-    return;
-  }
-  if (!requestIsSecure(req)) return accountApiError(res, 403, "Use the secure website to send a test email.");
-  if (!sameOriginRequest(req)) return accountApiError(res, 403, "This request could not be verified.");
-
-  let body;
-  try {
-    body = await readJsonBody(req);
-  } catch (e) {
-    return accountApiError(res, e.statusCode || 400,
-      e.statusCode === 413 ? "Request is too large." : "Send a valid JSON request.");
-  }
-
-  if (body.send !== true) return accountApiError(res, 400, "Confirm the test email request.");
-  const session = accounts && accounts.accountForSession(cookieValue(req, ACCOUNT_COOKIE), true);
-  if (!session || !session.email) return accountApiError(res, 401, "Sign in on the website before sending a test email.");
-
-  const ip = requestIp(req) || "unknown";
-  const limitKeys = [ip, `account:${session.email.toLowerCase()}`];
-  const now = Date.now();
-  for (const key of limitKeys) {
-    const limit = emailTestLimits.get(key);
-    if (limit && limit.until > now && limit.count >= EMAIL_TEST_LIMIT) {
-      return accountApiError(res, 429, "Test email limit reached. Try again later.");
-    }
-  }
-  for (const key of limitKeys) {
-    let limit = emailTestLimits.get(key);
-    if (!limit || limit.until <= now) {
-      limit = { count: 0, until: now + EMAIL_TEST_WINDOW_MS };
-      emailTestLimits.set(key, limit);
-    }
-    limit.count++;
-  }
-  if (emailTestLimits.size > 10000) {
-    for (const [key, value] of emailTestLimits) if (value.until <= now) emailTestLimits.delete(key);
-  }
-
-  try {
-    const delivery = await sendEmail({
-      to: session.email,
-      subject: "i-Pet Cyber Store 2096 email gateway test",
-      text: `This is a test message from the i-Pet Cyber Store 2096 website.\n\nThe email gateway accepted this message at ${new Date().toISOString()}.`,
-    });
-    log("test email accepted by gateway:", delivery.messageId);
-    return jsonResponse(res, 200, { ok: true, message: "Test email sent to your signed-in account's email address." });
-  } catch (e) {
-    log("test email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
-    return accountApiError(res, 502, "The email gateway could not send the test message.");
-  }
 }
 
 // Paw Points, leaderboards and Packs (see social.js); saved by store.js.
@@ -699,14 +691,6 @@ function applySettings(room, s) {
 
 const server = http.createServer((req, res) => {
   const requestPath = req.url && req.url.split("?")[0].replace(/\/+$/, "");
-  if (requestPath === "/api/test-email") {
-    handleEmailTestApi(req, res).catch((e) => {
-      log("test email handler error:", e && e.message ? e.message : "unknown_error");
-      if (!res.headersSent) accountApiError(res, 500, "The request could not be completed. Please try again.");
-      else res.destroy();
-    });
-    return;
-  }
   if (requestPath && requestPath.startsWith("/api/")) {
     handleAccountApi(req, res, requestPath).catch((e) => {
       log("account HTTP handler error:", e && e.message ? e.message : "unknown_error");

@@ -526,7 +526,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
     <details><summary>Can I play on my own?</summary><p>Yes. Every mode works offline with computer pets as Hiders and Catchers. Pick an easy, normal or hard difficulty, and up to 30 computer teammates.</p></details>
     <details><summary>Who are the "cbot" players?</summary><p>They're the computer pets. Each one gets a random tag like cbot4821 in its name bubble, so you can tell who's who in a crowded match.</p></details>
     <details><summary>How many people can play online?</summary><p>Up to 8 players in a room. Computer pets fill the empty places so matches always feel busy.</p></details>
-    <details><summary>Do I need an account?</summary><p>No. You can play without one. To sync your saved game profile between devices, register here or in the game. No email code is required; use an email address you can access for password recovery. Sign into the updated game once to link its local profile to an account created here.</p></details>
+    <details><summary>Do I need an account?</summary><p>No. You can play without one. To sync your saved game profile between devices, register here or in the game. Verify your email when you register; use an address you can access. Sign into the updated game once to link its local profile to an account created here.</p></details>
     <details><summary>How do I reset my password?</summary><p>Choose Sign in, then Forgot password. A reset code is sent to the email address on your account. Reset email delivery depends on the game server's email settings.</p></details>
     <details><summary>Is online chat safe?</summary><p>Chat is filtered, quick-chat phrases are built in, and players can be reported or removed from a room by its host.</p></details>
     <details><summary>Which modes can I play online?</summary><p>Classic matches are online today. Every mode can be played offline.</p></details>
@@ -542,7 +542,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
     <img class="dw" src="img/datawizard.png" alt="The Data Wizard logo">
     <div><p><b style="color:var(--ink)">The Data Wizard presents i-Pet Cyber Store 2096.</b></p>
       <p>Made with Godot. Version 1.10.9 beta, November 2026.</p>
-      <p><a href="https://youtu.be/UhGFwTFarVM">How to Play on YouTube</a> · <a href="#top">Back to the top</a></p><p><a class="btn cyan" href="/email-test.html">Open test email sender</a></p></div>
+      <p><a href="https://youtu.be/UhGFwTFarVM">How to Play on YouTube</a> · <a href="#top">Back to the top</a></p></div>
     <img class="lg" src="img/logo.png" alt="i-Pet Cyber Store 2096 logo">
   </div>
 </footer>
@@ -570,7 +570,7 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
         </div>
         <div class="account-card" id="account-register-view" hidden>
           <h3>Create your player account</h3>
-          <p>No email code is required. Your local game profile will be linked safely the first time you sign in to the updated game.</p>
+          <p>We'll email you a six-digit verification code. Your local game profile will be linked safely the first time you sign in to the updated game.</p>
           <form class="account-form" id="account-register-form" novalidate>
             <div class="account-register-grid">
               <label class="full">Email address
@@ -614,6 +614,18 @@ footer{background:#0c0618;border-top:3px solid var(--ink2)}
             <button type="submit" id="account-register-submit">Create account</button>
             <p class="account-message" id="account-register-message" role="status" aria-live="polite"></p>
             <button class="account-link" id="account-register-back" type="button">Already have an account? Sign in</button>
+          </form>
+        </div>
+        <div class="account-card" id="account-register-verify-view" hidden>
+          <h3>Verify your email</h3>
+          <p id="account-register-verify-intro">Enter the six-digit code we sent to your email. The code expires in 15 minutes.</p>
+          <form class="account-form" id="account-register-verify-form">
+            <label>Email address<input id="account-register-verify-email" name="email" type="email" autocomplete="email" maxlength="254" required readonly></label>
+            <label>Six-digit code<input class="account-code" id="account-register-verify-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
+            <button type="submit" id="account-register-verify-submit">Verify email</button>
+            <p class="account-message" id="account-register-verify-message" role="status" aria-live="polite"></p>
+            <button class="account-link" id="account-register-resend" type="button">Resend verification code</button>
+            <button class="account-link" id="account-register-verify-back" type="button">Back to sign in</button>
           </form>
         </div>
         <div class="account-card" id="account-reset-request-view" hidden>
@@ -810,10 +822,11 @@ function setAccountMessage(id, message, isError = false) {
 function showAccountMode(mode) {
   document.getElementById("account-login-view").hidden = mode !== "login";
   document.getElementById("account-register-view").hidden = mode !== "register";
+  document.getElementById("account-register-verify-view").hidden = mode !== "verify";
   document.getElementById("account-reset-request-view").hidden = mode !== "request";
   document.getElementById("account-reset-confirm-view").hidden = mode !== "confirm";
-  document.getElementById("account-promo").hidden = mode === "register";
-  signedOutView.classList.toggle("register-mode", mode === "register");
+  document.getElementById("account-promo").hidden = mode === "register" || mode === "verify";
+  signedOutView.classList.toggle("register-mode", mode === "register" || mode === "verify");
   signedOutView.hidden = false;
   signedInView.hidden = true;
 }
@@ -888,7 +901,11 @@ async function accountRequest(path, body) {
   try { result = text ? JSON.parse(text) : {}; } catch {
     throw new Error("The server returned an invalid response.");
   }
-  if (!response.ok) throw new Error(result.error || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    const error = new Error(result.error || `Request failed (${response.status}).`);
+    error.code = result.code || "";
+    throw error;
+  }
   return result;
 }
 function showAccountDialog(mode = "login") {
@@ -915,6 +932,7 @@ document.getElementById("account-reset-back").addEventListener("click", () => sh
 document.getElementById("account-reset-back-confirm").addEventListener("click", () => showAccountMode("login"));
 
 const accountRegisterForm = document.getElementById("account-register-form");
+let pendingRegistrationRemember = false;
 const accountRegisterInputs = [...accountRegisterForm.querySelectorAll("[data-validate]")];
 const accountRegisterAge = document.getElementById("account-register-age");
 const accountRegisterDob = document.getElementById("account-register-dob");
@@ -1021,9 +1039,9 @@ accountRegisterForm.addEventListener("submit", async event => {
   submit.disabled = true;
   submit.textContent = "Creating account...";
   setAccountMessage("account-register-message", "");
-  let created = false;
   try {
-    await accountRequest("/api/register", {
+    const remember = document.getElementById("account-register-remember").checked;
+    const result = await accountRequest("/api/register", {
       email: document.getElementById("account-register-email").value.trim(),
       username: document.getElementById("account-register-username").value.trim(),
       first_name: document.getElementById("account-register-first-name").value.trim(),
@@ -1032,25 +1050,62 @@ accountRegisterForm.addEventListener("submit", async event => {
       age: Number(accountRegisterAge.value),
       date_of_birth: accountRegisterDob.value,
       password: accountRegisterPassword.value,
-      remember: document.getElementById("account-register-remember").checked,
+      remember,
     });
-    created = true;
-    const data = await accountRequest("/api/me");
-    setAccountSignedIn(data);
-    setAccountMessage("account-profile-message", "Account created. Sign in with the updated game to link your saved local progress.");
+    pendingRegistrationRemember = remember;
+    document.getElementById("account-register-verify-email").value = result.email;
+    document.getElementById("account-register-verify-code").value = "";
+    showAccountMode("verify");
+    setAccountMessage("account-register-verify-message", result.message || "Enter the code from your email.", result.deliveryFailed === true);
     accountRegisterForm.reset();
   } catch (error) {
-    if (created) {
-      showAccountMode("login");
-      setAccountMessage("account-login-message", "Your account was created, but its profile could not be loaded. Sign in to continue.", true);
-    } else {
-      setAccountMessage("account-register-message", error.message || "Could not create your account. Please try again.", true);
-    }
+    setAccountMessage("account-register-message", error.message || "Could not create your account. Please try again.", true);
   } finally {
     submit.disabled = false;
     submit.textContent = "Create account";
   }
 });
+
+document.getElementById("account-register-verify-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const submit = document.getElementById("account-register-verify-submit");
+  submit.disabled = true;
+  submit.textContent = "Verifying...";
+  setAccountMessage("account-register-verify-message", "");
+  try {
+    await accountRequest("/api/register/verify", {
+      email: document.getElementById("account-register-verify-email").value,
+      code: document.getElementById("account-register-verify-code").value.trim(),
+      remember: pendingRegistrationRemember,
+    });
+    const data = await accountRequest("/api/me");
+    setAccountSignedIn(data);
+    setAccountMessage("account-profile-message", "Email verified. Account created. Sign in with the updated game to link your saved local progress.");
+    pendingRegistrationRemember = false;
+  } catch (error) {
+    setAccountMessage("account-register-verify-message", error.message || "Could not verify your email.", true);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Verify email";
+  }
+});
+
+document.getElementById("account-register-resend").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  setAccountMessage("account-register-verify-message", "Sending a new code...");
+  try {
+    const result = await accountRequest("/api/register/resend", {
+      email: document.getElementById("account-register-verify-email").value,
+    });
+    setAccountMessage("account-register-verify-message", result.message);
+  } catch (error) {
+    setAccountMessage("account-register-verify-message", error.message || "Could not resend the code.", true);
+  } finally {
+    button.disabled = false;
+  }
+});
+document.getElementById("account-register-verify-back").addEventListener("click", () => showAccountMode("login"));
 
 document.getElementById("account-login-form").addEventListener("submit", async event => {
   event.preventDefault();
@@ -1068,7 +1123,21 @@ document.getElementById("account-login-form").addEventListener("submit", async e
     setAccountSignedIn(data);
     document.getElementById("account-login-form").reset();
   } catch (error) {
-    setAccountMessage("account-login-message", error.message || "Could not sign in. Check your connection and try again.", true);
+    if (error.code === "account_unverified") {
+      const email = document.getElementById("account-login-email").value.trim();
+      pendingRegistrationRemember = document.getElementById("account-remember").checked;
+      document.getElementById("account-register-verify-email").value = email;
+      showAccountMode("verify");
+      setAccountMessage("account-register-verify-message", "Verify this email before signing in.");
+      try {
+        await accountRequest("/api/register/resend", {email});
+        setAccountMessage("account-register-verify-message", "If this account needs verification, a code has been sent. Check your email.");
+      } catch (resendError) {
+        setAccountMessage("account-register-verify-message", resendError.message || "Could not send a verification code.", true);
+      }
+    } else {
+      setAccountMessage("account-login-message", error.message || "Could not sign in. Check your connection and try again.", true);
+    }
   } finally {
     submit.disabled = false;
     submit.textContent = "Sign in";

@@ -42,14 +42,13 @@ Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 
 The website and in-game Account page can create an account using an email
 address, unique username, first name, surname, country, age and date of birth.
-Email ownership is not confirmed during registration and no code is sent; users
-should enter an address they can access for password recovery. New accounts
-receive 250 bolts once. A website-created account links the existing local game
-profile on the first sign-in from the updated game client. Registered gameplay
+Email ownership is confirmed with a six-digit code during registration. Codes
+expire after 15 minutes, and new accounts receive 250 bolts after verification.
+A website-created account links the existing local game profile on the first
+sign-in from the updated game client. Registered gameplay
 progress—including bolts, wardrobe, special items, challenges, badges and
 stats—is stored on the server and synced when online. Device preferences
 remain local.
-Device preferences remain local.
 
 The website's **Sign in** button uses the same email and password.
 Players can view their saved profile there, choose **Remember me on this
@@ -69,12 +68,6 @@ emails through it; those deployments need an email-gateway adapter available
 on their own host. Account registration and sign-in require a secure `wss://`
 connection outside localhost. Website account actions use HTTPS; game account
 actions use WSS.
-
-The website footer's **Open test email sender** link opens `/email-test.html`.
-The sender requires a signed-in account and sends a fixed test message only to
-that account's email address. It allows at most three sends per IP and account
-per hour. It uses the existing GoDaddy email gateway and account session, so no
-extra sender address or test-token environment variables are needed.
 
 ## Files
 
