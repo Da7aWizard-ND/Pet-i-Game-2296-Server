@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.11.3",
-  "min_version": "1.11.2",
-  "url": "/releases/iPetSetup-1.11.3.exe",
-  "sha256": "8f434e453e7c88e8db89cc24ed1c66a72815b2da9ff707658f26d921e7dc9da8",
-  "size": 37208135,
-  "notes": "Beta 1.11.3 for auto-update testing",
+  "version": "1.11.5",
+  "min_version": "1.11.3",
+  "url": "/releases/iPetSetup-1.11.5.exe",
+  "sha256": "50fcfe385bc99adb1d6b61639b4b25af3644c400755f51c981f20455e55b3fec",
+  "size": 37377776,
+  "notes": "Beta 1.11.5",
   "mandatory": false,
-  "published": "2026-11-26T17:45:12.446Z"
+  "published": "2026-11-26T18:14:45.657Z"
 }
