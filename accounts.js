@@ -322,6 +322,10 @@ function createAccounts({
     if (!await store.flush()) {
       sessionIndex.delete(crypto.createHash("sha256").update(token).digest("hex"));
       account.sessions = previousSessions;
+      for (const [hash, accountKey] of sessionIndex) {
+        if (accountKey === key) sessionIndex.delete(hash);
+      }
+      for (const session of previousSessions) sessionIndex.set(session.hash, key);
       if (profileLink) {
         account.pid = profileLink.pid;
         account.profile = profileLink.profile;
@@ -425,6 +429,11 @@ function createAccounts({
     }
 
     const passwordHashValue = await hashPassword(password);
+    const previousPasswordHash = account.passwordHash;
+    const previousCodeHash = account.codeHash;
+    const previousCodeExpiresAt = account.codeExpiresAt;
+    const previousVerifyAttempts = account.verifyAttempts;
+    const previousSessions = (account.sessions || []).slice();
     account.passwordHash = passwordHashValue;
     account.codeHash = "";
     account.codeExpiresAt = 0;
@@ -433,7 +442,16 @@ function createAccounts({
     account.sessions = [];
     store.touchAccount(account);
     onPasswordReset(key);
-    if (!await store.flush()) return { ok: false, code: "account_storage" };
+    if (!await store.flush()) {
+      account.passwordHash = previousPasswordHash;
+      account.codeHash = previousCodeHash;
+      account.codeExpiresAt = previousCodeExpiresAt;
+      account.verifyAttempts = previousVerifyAttempts;
+      account.sessions = previousSessions;
+      for (const session of previousSessions) sessionIndex.set(session.hash, key);
+      store.touchAccount(account);
+      return { ok: false, code: "account_storage" };
+    }
     return { ok: true };
   }
 
@@ -625,10 +643,18 @@ function createAccounts({
       });
       return error(c, "account_sync_revision", "The server profile changed. The latest profile is being restored.");
     }
+    const previousProfile = account.profile;
+    const previousUpdatedAt = account.profileUpdatedAt;
     account.profile = profile;
     account.profileUpdatedAt = Date.now();
     store.touchAccount(account);
-    if (!await store.flush()) return error(c, "account_storage", "The server could not save your profile. It will retry.");
+    if (!await store.flush()) {
+      account.profile = previousProfile;
+      if (previousUpdatedAt === undefined) delete account.profileUpdatedAt;
+      else account.profileUpdatedAt = previousUpdatedAt;
+      store.touchAccount(account);
+      return error(c, "account_storage", "The server could not save your profile. It will retry.");
+    }
     send(c, { t: "account", event: "profile_saved", sync_id: m.sync_id });
   }
 

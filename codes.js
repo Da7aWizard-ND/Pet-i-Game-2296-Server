@@ -85,7 +85,7 @@ function createCodes({ store, send, error, log, playerOf }) {
   const handlers = {
     // A player types a code. Also how the admin panel is opened: anything that
     // isn't 12 digits is checked as the admin password.
-    redeem(c, m) {
+    async redeem(c, m) {
       const text = String(m.code || "").replace(/[\s-]/g, "").slice(0, 40);
       if (blocked(c)) return send(c, { t: "redeem", ok: false, why: "slow", text: "Too many tries. Wait a few minutes." });
       if (!/^\d{12}$/.test(text)) {
@@ -105,8 +105,14 @@ function createCodes({ store, send, error, log, playerOf }) {
       if (code.used) return send(c, { t: "redeem", ok: false, why: "used", text: "That code has already been used." });
       if (code.expires < Date.now()) return send(c, { t: "redeem", ok: false, why: "expired", text: "That code has expired." });
       const p = playerOf(c);
+      const previousUsed = code.used;
       code.used = { pid: p ? p.pid : "", tag: c.tag || "?", at: Date.now() };
       store.touchCode(code);
+      if (!await store.flush()) {
+        code.used = previousUsed;
+        store.touchCode(code);
+        return send(c, { t: "redeem", ok: false, why: "storage", text: "The code could not be saved. Please try again." });
+      }
       log(`code ${text.slice(0, 4)}… redeemed by ${c.tag}`);
       send(c, { t: "redeem", ok: true, reward: code.reward });
     },
