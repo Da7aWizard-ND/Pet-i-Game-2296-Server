@@ -26,6 +26,7 @@ const { createSocial } = require("./social");
 const { createCodes } = require("./codes");
 const { createConfig } = require("./config");
 const { createAccounts } = require("./accounts");
+const { createUpdates } = require("./updates");
 
 const PROTOCOL = 2;              // bump when the message format changes (old games get "please update")
 const PORT = parseInt(process.env.PORT || "8080", 10);
@@ -40,6 +41,7 @@ const SITE_DIR = fs.existsSync(path.join(__dirname, "site"))
   : fs.existsSync(path.join(__dirname, "website"))
     ? path.join(__dirname, "website")
     : path.resolve(__dirname, "..", "website");
+const updates = createUpdates();
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -711,6 +713,7 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ values: config ? config.current() : {}, updated: config ? config.updated() : "" }));
     return;
   }
+  if (updates(req, res)) return;
   if (req.method !== "GET" && req.method !== "HEAD") {
     res.writeHead(405, { allow: "GET, HEAD" });
     res.end();

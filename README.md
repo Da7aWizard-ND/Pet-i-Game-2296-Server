@@ -38,6 +38,15 @@ The website's live lobby badge reads the online player count from `/status`.
 Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 (`SERVER_URL`). The web build on an https page can only connect to `wss://`.
 
+## Game auto-updates
+
+The game checks `/update.json` at launch and downloads published installers
+from `/releases/`. Publish an installer from the project root with
+`node server/tools/publish-update.js <installer.exe> <version> [notes]`, then
+copy `server/releases` into this deployment folder before uploading it and
+rerunning `setup_server.sh`. The setup script installs `updates.js` and copies
+the optional `releases/` folder into the running server.
+
 ## Email accounts and profile sync
 
 The website and in-game Account page can create an account using an email
@@ -73,6 +82,7 @@ actions use WSS.
 
 - `setup_server.sh`: installs the bundled server modules and website on Ubuntu.
 - `lobby_server.js`: WebSocket lobby, game relay and HTTP site server.
+- `updates.js`: serves update manifests and published installers.
 - `accounts.js`: account registration, password authentication and profile sync.
 - `store.js`: persistent MySQL or JSON-file storage.
 - `social.js`, `codes.js`, `config.js`: online profile, gift-code and live-config handlers.
