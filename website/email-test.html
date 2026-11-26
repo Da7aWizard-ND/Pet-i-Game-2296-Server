@@ -29,12 +29,9 @@
   <main>
     <p class="eyebrow">Server tools</p>
     <h1>Test email sender</h1>
-    <p>Sends one fixed test message to the recipient configured by the server administrator. The access key is used only for this request and is not saved in this browser.</p>
+    <p>Sends one fixed test message to the email address on your signed-in account. Sign in on the website first. No message text or recipient can be entered here.</p>
     <form id="test-form">
-      <label for="access-key">Test sender access key
-        <input id="access-key" name="token" type="password" autocomplete="off" minlength="32" required>
-      </label>
-      <button id="send-button" type="submit">Send test email</button>
+      <button id="send-button" type="submit">Send test email to my account</button>
       <p id="result" role="status" aria-live="polite"></p>
     </form>
     <a class="back" href="/">Back to the website</a>
@@ -53,12 +50,11 @@
           method: "POST",
           credentials: "same-origin",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token: form.elements.token.value })
+          body: JSON.stringify({ send: true })
         });
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "The test email could not be sent.");
         result.textContent = body.message || "Test email accepted by the server.";
-        form.reset();
       } catch (error) {
         result.classList.add("error");
         result.textContent = error.message || "The test email could not be sent.";

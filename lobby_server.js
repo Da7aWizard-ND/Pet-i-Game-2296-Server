@@ -15,7 +15,6 @@
 // Health check: GET / returns "i-Pet Cyber Store 2096 lobby OK".
 
 "use strict";
-const crypto = require("crypto");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -306,12 +305,6 @@ async function handleEmailTestApi(req, res) {
   if (!requestIsSecure(req)) return accountApiError(res, 403, "Use the secure website to send a test email.");
   if (!sameOriginRequest(req)) return accountApiError(res, 403, "This request could not be verified.");
 
-  const configuredToken = process.env.EMAIL_TEST_TOKEN || "";
-  const recipient = String(process.env.EMAIL_TEST_RECIPIENT || "").trim();
-  if (configuredToken.length < 32 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
-    return accountApiError(res, 503, "Test email is not configured on the server.");
-  }
-
   let body;
   try {
     body = await readJsonBody(req);
@@ -320,36 +313,39 @@ async function handleEmailTestApi(req, res) {
       e.statusCode === 413 ? "Request is too large." : "Send a valid JSON request.");
   }
 
-  const suppliedToken = typeof body.token === "string" ? body.token : "";
-  const expected = Buffer.from(configuredToken, "utf8");
-  const supplied = Buffer.from(suppliedToken, "utf8");
-  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
-    return accountApiError(res, 401, "The test sender access key is invalid.");
-  }
+  if (body.send !== true) return accountApiError(res, 400, "Confirm the test email request.");
+  const session = accounts && accounts.accountForSession(cookieValue(req, ACCOUNT_COOKIE), true);
+  if (!session || !session.email) return accountApiError(res, 401, "Sign in on the website before sending a test email.");
 
   const ip = requestIp(req) || "unknown";
+  const limitKeys = [ip, `account:${session.email.toLowerCase()}`];
   const now = Date.now();
-  let limit = emailTestLimits.get(ip);
-  if (!limit || limit.until <= now) {
-    limit = { count: 0, until: now + EMAIL_TEST_WINDOW_MS };
-    emailTestLimits.set(ip, limit);
+  for (const key of limitKeys) {
+    const limit = emailTestLimits.get(key);
+    if (limit && limit.until > now && limit.count >= EMAIL_TEST_LIMIT) {
+      return accountApiError(res, 429, "Test email limit reached. Try again later.");
+    }
   }
-  if (limit.count >= EMAIL_TEST_LIMIT) {
-    return accountApiError(res, 429, "Test email limit reached. Try again later.");
+  for (const key of limitKeys) {
+    let limit = emailTestLimits.get(key);
+    if (!limit || limit.until <= now) {
+      limit = { count: 0, until: now + EMAIL_TEST_WINDOW_MS };
+      emailTestLimits.set(key, limit);
+    }
+    limit.count++;
   }
-  limit.count++;
   if (emailTestLimits.size > 10000) {
     for (const [key, value] of emailTestLimits) if (value.until <= now) emailTestLimits.delete(key);
   }
 
   try {
     const delivery = await sendEmail({
-      to: recipient,
+      to: session.email,
       subject: "i-Pet Cyber Store 2096 email gateway test",
       text: `This is a test message from the i-Pet Cyber Store 2096 website.\n\nThe email gateway accepted this message at ${new Date().toISOString()}.`,
     });
     log("test email accepted by gateway:", delivery.messageId);
-    return jsonResponse(res, 200, { ok: true, message: "Test email sent to the configured test address." });
+    return jsonResponse(res, 200, { ok: true, message: "Test email sent to your signed-in account's email address." });
   } catch (e) {
     log("test email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
     return accountApiError(res, 502, "The email gateway could not send the test message.");

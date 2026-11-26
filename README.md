@@ -71,13 +71,10 @@ connection outside localhost. Website account actions use HTTPS; game account
 actions use WSS.
 
 The website footer's **Open test email sender** link opens `/email-test.html`.
-To enable it on GoDaddy, set `EMAIL_TEST_RECIPIENT` to the administrator's
-test inbox and `EMAIL_TEST_TOKEN` to a private random value of at least 32
-characters in the hosting environment variables. Generate a token with
-`openssl rand -hex 32`. The page sends only a fixed test message to that
-configured inbox, requires the token, and allows at most three sends per IP
-per hour. Leave these variables unset to keep the test sender disabled. Do
-not reuse `ACCOUNT_SECRET` as the test token.
+The sender requires a signed-in account and sends a fixed test message only to
+that account's email address. It allows at most three sends per IP and account
+per hour. It uses the existing GoDaddy email gateway and account session, so no
+extra sender address or test-token environment variables are needed.
 
 ## Files
 
