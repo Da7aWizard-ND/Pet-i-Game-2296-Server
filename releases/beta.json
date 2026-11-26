@@ -3,9 +3,9 @@
   "version": "1.11.5",
   "min_version": "1.11.3",
   "url": "/releases/iPetSetup-1.11.5.exe",
-  "sha256": "50fcfe385bc99adb1d6b61639b4b25af3644c400755f51c981f20455e55b3fec",
-  "size": 37377776,
-  "notes": "Beta 1.11.5",
+  "sha256": "6e3ba8277a2ac5424e16a985f47e888b85dc22fb554863247da77bcc9a538bab",
+  "size": 37385958,
+  "notes": "Beta 1.11.5 with virtual pet care",
   "mandatory": false,
-  "published": "2026-11-26T18:14:45.657Z"
+  "published": "2026-11-26T18:45:30.023Z"
 }
