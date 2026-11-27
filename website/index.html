@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>i-Pet Cyber Store 2096</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Luckiest+Guy&display=swap" rel="stylesheet">
+<style>
+/* VOICE occasion: a game's home page, bright and playful like the game itself
+   IDEA the i-Pet Cyber Store at night: neon shop signs, shelf labels, price tags, a glowing shop window
+   PICTURE the Mega Store seen through a neon shop window with the cyborg pets lined up on the floor in front
+   COLOUR deep store purple ground, hot pink signs, cyan glow, gold for bolts and prizes (the game's own palette, both themes)
+   TYPE Luckiest Guy for signs and headings, Fredoka for text (the game's title lettering)
+   LAYOUT laptop: sign-style title top-left, shop window filling the right and the pet line-up across the bottom; phone: title, window, pets, buttons */
+:root{color-scheme:dark;--bg:#170c2b;--bg2:#21123b;--panel:#2a1748;--line:#4b2d78;--ink:#f6f1ff;--soft:#c9b8ea;--pink:#ff3fb4;--cyan:#33ffe0;--gold:#ffd23f;--orange:#ff8c1a;--green:#6cff5a;--ink2:#120820}
+*{box-sizing:border-box;min-width:0}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 Fredoka,"Trebuchet MS",system-ui,sans-serif;overflow-x:clip}
+img{max-width:100%;display:block}
+a{color:var(--cyan)}
+h1,h2,h3{font-family:"Luckiest Guy",Fredoka,system-ui,sans-serif;font-weight:400;line-height:1.05;letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font-size:clamp(34px,4.6vw,52px);color:var(--pink);text-shadow:0 0 18px rgba(255,63,180,.55),3px 4px 0 var(--ink2)}
+h3{font-size:24px;color:var(--ink)}
+p{margin:.4em 0 .9em;max-width:68ch}
+.band{padding:clamp(36px,5vw,72px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+.lead{font-size:19px;color:var(--soft);max-width:62ch}
+.btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:10px 22px;border-radius:14px;border:3px solid var(--ink2);font:600 18px/1 Fredoka,system-ui,sans-serif;text-decoration:none;box-shadow:4px 5px 0 var(--ink2);transition:transform .12s}
+.btn:hover{transform:translateY(-2px)}
+.btn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.btn.pink{background:var(--pink);color:#fff}
+.btn.cyan{background:var(--cyan);color:var(--ink2)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);box-shadow:none}
+/* nav */
+nav{position:sticky;top:0;z-index:20;background:rgba(23,12,43,.94);backdrop-filter:blur(12px);border-bottom:2px solid var(--line);box-shadow:0 8px 24px rgba(7,3,14,.28)}
+.nav{position:relative;max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:8px max(3vw,12px)}
+.nav .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);font:400 20px "Luckiest Guy",sans-serif;flex:none}
+.nav .brand img{width:40px;height:40px}
+.nav-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.menu-toggle,.account-trigger{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:8px 12px;border:2px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink);font:700 15px Fredoka,sans-serif;cursor:pointer;transition:transform .12s,border-color .12s,background .12s}
+.menu-toggle:hover,.menu-toggle:focus-visible{border-color:var(--gold);background:var(--bg2);outline:3px solid rgba(255,210,63,.22);outline-offset:2px}
+.menu-toggle[aria-expanded="true"]{border-color:var(--cyan);color:var(--cyan)}
+.menu-icon{display:grid;gap:3px;width:16px}
+.menu-icon i{height:2px;border-radius:2px;background:currentColor;transition:transform .15s,opacity .15s}
+.menu-toggle[aria-expanded="true"] .menu-icon i:first-child{transform:translateY(5px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] .menu-icon i:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] .menu-icon i:last-child{transform:translateY(-5px) rotate(-45deg)}
+.account-trigger{border-color:var(--cyan);background:var(--ink2);color:var(--cyan);box-shadow:0 0 16px rgba(51,255,224,.16)}
+.account-trigger:hover,.account-trigger:focus-visible{background:var(--cyan);color:var(--ink2);outline:3px solid var(--gold);outline-offset:2px}
+.register-trigger{border-color:var(--pink);background:var(--pink);color:#fff;box-shadow:3px 4px 0 var(--ink2)}
+.register-trigger:hover,.register-trigger:focus-visible{background:#ff71c8;color:var(--ink2);outline:3px solid var(--gold);outline-offset:2px}
+.menu-panel{position:absolute;top:calc(100% + 10px);left:50%;width:min(960px,calc(100vw - 24px));transform:translateX(-50%);grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;border:2px solid var(--cyan);border-radius:18px;background:linear-gradient(145deg,rgba(42,23,72,.98),rgba(18,8,32,.98));box-shadow:0 16px 38px rgba(0,0,0,.5),0 0 24px rgba(51,255,224,.15)}
+.menu-panel:not([hidden]){display:grid}
+.menu-group{padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(18,8,32,.72)}
+.menu-kicker{margin:0 0 8px;color:var(--gold);font:400 17px "Luckiest Guy",Fredoka,sans-serif;letter-spacing:.04em}
+.menu-group-links{display:grid;gap:3px}
+.menu-group-links a{display:flex;align-items:center;min-height:38px;padding:7px 9px;border-radius:8px;color:var(--soft);font-size:15px;font-weight:600;text-decoration:none;transition:background .12s,color .12s,transform .12s}
+.menu-group-links a:hover,.menu-group-links a:focus-visible{background:var(--panel);color:var(--cyan);outline:2px solid var(--cyan);outline-offset:-2px;transform:translateX(2px)}
+@media (max-width:760px){.menu-panel{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.nav{gap:8px;padding:7px 10px}.nav-actions{gap:5px}.nav .brand{gap:0}.nav .brand span{display:none}.menu-toggle,.account-trigger{min-height:40px;padding:7px 9px;font-size:13px}.menu-panel{max-height:calc(100dvh - 76px);overflow:auto;grid-template-columns:minmax(0,1fr);padding:10px}.menu-group{padding:9px}}
+@media (max-width:360px){.menu-toggle .menu-label{display:none}}
+/* hero */
+.hero{background:radial-gradient(120% 80% at 70% 20%,#3a1a66 0%,var(--bg) 60%);border-bottom:3px solid var(--ink2)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,4vw,48px);align-items:center}
+.sign{font-family:"Luckiest Guy",sans-serif;font-size:clamp(54px,8vw,104px);line-height:.92;color:var(--pink);text-shadow:0 0 26px rgba(255,63,180,.7),4px 6px 0 var(--ink2)}
+.sign small{display:block;font-size:.46em;color:var(--cyan);text-shadow:0 0 22px rgba(51,255,224,.6),3px 4px 0 var(--ink2);margin-top:.18em}
+.sign b{font-weight:400;color:var(--gold);text-shadow:0 0 20px rgba(255,210,63,.6),3px 4px 0 var(--ink2)}
+.hero .lead{margin-top:18px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.version-mark{display:inline-flex;align-items:center;gap:8px;margin:12px 0 0;padding:6px 12px;border:2px solid var(--gold);border-radius:8px;background:var(--ink2);color:var(--soft);font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+.version-mark b{color:var(--gold)}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;padding:0;list-style:none}
+.facts li{background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:6px 14px;font-size:15px;color:var(--soft);white-space:nowrap}
+.facts b{color:var(--gold)}
+.window{position:relative;border-radius:22px;padding:14px;background:linear-gradient(160deg,#2c1650,#14092a);border:4px solid var(--ink2);box-shadow:0 0 0 4px var(--pink),0 0 42px rgba(255,63,180,.55),0 0 90px rgba(51,255,224,.18)}
+.window img.shot{border-radius:12px;border:3px solid var(--ink2);aspect-ratio:16/9;object-fit:cover;width:100%}
+.window .tag{position:absolute;top:-18px;left:24px;background:var(--cyan);color:var(--ink2);font:400 18px "Luckiest Guy",sans-serif;padding:6px 14px;border-radius:10px;border:3px solid var(--ink2);box-shadow:3px 3px 0 var(--ink2)}
+.parade{display:flex;justify-content:center;align-items:flex-end;gap:clamp(2px,1vw,12px);margin-top:-46px;position:relative;padding:0 8px}
+.parade img{height:clamp(54px,8vw,104px);width:auto;filter:drop-shadow(0 8px 6px rgba(0,0,0,.45));animation:bob 2.4s ease-in-out infinite}
+.parade img:nth-child(2n){animation-delay:-1.2s}
+.parade img:nth-child(3n){animation-delay:-.6s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.floor{height:16px;margin:0 6%;border-radius:50%;background:radial-gradient(closest-side,rgba(51,255,224,.55),transparent)}
+@media (max-width:820px){.hero-grid{grid-template-columns:minmax(0,1fr)}.parade img:nth-child(n+7){display:none}}
+/* round */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:26px}
+.step{background:var(--panel);border:3px solid var(--ink2);border-radius:18px;padding:20px 20px 10px;box-shadow:5px 6px 0 var(--ink2)}
+.step .n{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--gold);color:var(--ink2);font:400 24px "Luckiest Guy",sans-serif;border:3px solid var(--ink2);margin-bottom:10px}
+.step:nth-child(2) .n{background:var(--pink);color:#fff}
+.step:nth-child(3) .n{background:var(--cyan)}
+.step p{color:var(--soft);font-size:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.chips span{background:var(--bg2);border:2px solid var(--line);border-radius:8px;padding:3px 10px;font-size:14px;color:var(--ink);white-space:nowrap}
+@media (max-width:820px){.steps{grid-template-columns:minmax(0,1fr)}}
+/* pets */
+.alt{background:var(--bg2);border-block:3px solid var(--ink2)}
+.pets{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px;margin-top:26px}
+.pet{background:linear-gradient(180deg,#341c5c,#22123e);border:3px solid var(--ink2);border-radius:16px;padding:12px 8px 10px;text-align:center;box-shadow:4px 5px 0 var(--ink2)}
+.pet img{height:84px;width:auto;margin:0 auto 6px;object-fit:contain}
+.pet{cursor:pointer;font:inherit;color:inherit;width:100%;transition:transform .12s,border-color .12s}
+.pet:hover{transform:translateY(-3px)}
+.pet:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.pet[aria-pressed="true"]{border-color:var(--cyan);box-shadow:4px 5px 0 var(--ink2),0 0 18px rgba(51,255,224,.45)}
+.pet b{display:block;font:400 19px/1.1 "Luckiest Guy",Fredoka,sans-serif;color:var(--gold);letter-spacing:.02em}
+.pet small{display:block;font-size:13px;color:var(--soft)}
+.story{display:grid;grid-template-columns:220px minmax(0,1fr) 300px;gap:26px;margin-top:22px;background:var(--panel);border:3px solid var(--ink2);border-radius:20px;padding:22px 24px;box-shadow:6px 7px 0 var(--ink2)}
+.story .pic{background:radial-gradient(circle at 50% 60%,rgba(51,255,224,.22),transparent 65%);border-radius:16px;display:flex;align-items:center;justify-content:center;min-height:200px}
+.story .pic img{max-height:200px;width:auto}
+.story h3{font-size:36px;color:var(--gold);text-shadow:3px 4px 0 var(--ink2)}
+.story .kind{color:var(--cyan);font-weight:600;margin:2px 0 10px}
+.story p{color:var(--soft);font-size:16px}
+.story p.hook{color:var(--ink);font-size:18px}
+.story dl{margin:0;display:grid;gap:12px;align-content:start}
+.story dt{font:400 16px "Luckiest Guy",sans-serif;color:var(--pink);letter-spacing:.03em}
+.story dd{margin:2px 0 0;color:var(--ink);font-size:15px}
+.story .quote{font:400 22px/1.15 "Luckiest Guy",sans-serif;color:var(--cyan);background:var(--ink2);border-radius:14px;padding:12px 14px;margin-top:4px}
+.night{max-width:70ch;color:var(--soft);margin-top:8px}
+@media (max-width:1000px){.story{grid-template-columns:160px minmax(0,1fr)}.story dl{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:620px){.story{grid-template-columns:1fr;padding:18px}.story .pic{min-height:150px}.story .pic img{max-height:150px}.story dl{grid-template-columns:1fr}}
+@media (max-width:1000px){.pets{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:420px){.pets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.note{color:var(--soft);font-size:15px;margin-top:16px}
+.server-status{--status-color:var(--cyan);display:inline-flex;align-items:center;gap:9px;margin-top:16px;padding:8px 13px;border:1px solid color-mix(in srgb,var(--status-color) 45%,transparent);border-radius:999px;background:rgba(18,8,32,.72);color:var(--status-color);font-size:13px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.server-status[data-state="offline"]{--status-color:var(--orange)}
+.server-status[data-state="online"]{--status-color:var(--green)}
+.server-led{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor;flex:none}
+.server-status[data-state="online"] .server-led{animation:server-pulse 1.8s ease-in-out infinite}
+@keyframes server-pulse{50%{opacity:.45;box-shadow:0 0 3px currentColor}}
+/* modes */
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:26px}
+.mode{position:relative;background:var(--panel);border:3px solid var(--ink2);border-radius:16px;padding:18px 18px 8px 18px;box-shadow:4px 5px 0 var(--ink2);overflow:hidden}
+.mode::before{content:"";position:absolute;inset:0 auto 0 0;width:8px;background:var(--c)}
+.mode h3{color:var(--c);font-size:23px;margin-bottom:6px}
+.mode p{font-size:16px;color:var(--soft);margin:0 0 10px}
+.mode .opt{font-size:14px;color:var(--ink);opacity:.85}
+@media (max-width:900px){.modes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.modes{grid-template-columns:minmax(0,1fr)}}
+/* maps */
+.maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:26px}
+.map{background:var(--panel);border:3px solid var(--ink2);border-radius:18px;overflow:hidden;box-shadow:5px 6px 0 var(--ink2)}
+.map img{aspect-ratio:16/9;object-fit:cover;width:100%;border-bottom:3px solid var(--ink2)}
+.map div{padding:14px 18px 6px}
+.map .map-art{position:relative;display:grid;place-items:center;aspect-ratio:16/9;overflow:hidden;padding:0;border-bottom:3px solid var(--ink2);background:radial-gradient(ellipse at 50% 50%,color-mix(in srgb,var(--map-accent) 24%,var(--panel)),var(--bg2) 72%)}
+.map-art::before,.map-art::after{content:"";position:absolute;width:58%;aspect-ratio:1;border:2px solid color-mix(in srgb,var(--map-accent) 65%,transparent);border-radius:34% 66% 48% 52%;transform:rotate(-26deg)}
+.map-art::after{width:42%;border-style:dashed;border-radius:48% 52% 38% 62%;transform:rotate(32deg)}
+.map-art span{position:relative;padding:7px 12px;border:2px solid var(--ink2);border-radius:8px;background:var(--bg);color:var(--map-accent);font:400 18px "Luckiest Guy",sans-serif;letter-spacing:.08em;box-shadow:3px 4px 0 var(--ink2)}
+.map h3{color:var(--cyan)}
+.map p{color:var(--soft);font-size:16px}
+@media (max-width:700px){.maps{grid-template-columns:minmax(0,1fr)}}
+/* items */
+.fams{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:26px}
+.fam{background:var(--panel);border:3px solid var(--ink2);border-radius:18px;padding:18px;box-shadow:5px 6px 0 var(--ink2)}
+.fam h3{color:var(--c);margin-bottom:4px}
+.fam>p{font-size:15px;color:var(--soft);margin-bottom:10px}
+.fam ul{list-style:none;padding:0;margin:0}
+.fam li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:9px 0;border-top:2px dashed var(--line);font-size:15px}
+.fam li i{width:14px;height:14px;border-radius:4px;margin-top:5px;background:var(--c);border:2px solid var(--ink2)}
+.fam li b{color:var(--ink)}
+.fam li span{grid-column:2;color:var(--soft)}
+.howsp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin-top:24px}.howsp .hs{grid-column:span 2}.howsp .hs.mach{grid-column:span 3}
+@media (max-width:900px){.howsp{grid-template-columns:minmax(0,1fr)}.howsp .hs,.howsp .hs.mach{grid-column:auto}}
+.hs{background:var(--panel);border:3px solid var(--ink2);border-radius:18px;padding:16px 18px;box-shadow:5px 6px 0 var(--ink2)}
+.hs h3{color:var(--cyan);margin-bottom:4px}.hs p{margin:0;color:var(--soft);font-size:15px}
+.hs.mach{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:start}.hs.mach img{height:140px;width:auto}
+.prof{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;margin-top:24px;align-items:start}
+.prof img{width:100%;border-radius:16px;border:3px solid var(--ink2);box-shadow:5px 6px 0 var(--ink2)}
+.prof h3{color:var(--cyan);margin:0 0 6px}.prof ul{margin:0 0 18px;padding-left:20px;color:var(--soft)}.prof p{color:var(--soft);margin:0}
+.bdgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:14px}
+.bdg{background:var(--bg2);border:2px solid var(--line);border-radius:14px;padding:10px;display:grid;justify-items:center;text-align:center;gap:2px}
+.bdg img{width:72px;height:72px}.bdg b{color:var(--ink);font-size:16px;line-height:1.25}.bdg span{color:var(--soft);font-size:14px;line-height:1.35}
+@media (max-width:900px){.prof{grid-template-columns:minmax(0,1fr)}}
+.spx{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
+.spi{background:var(--bg2);border:2px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;grid-template-columns:56px minmax(0,1fr);gap:2px 10px}
+.spi img{width:56px;height:56px;grid-row:1/span 4}
+.spi b{color:var(--ink);font-size:16px;line-height:1.25}
+.spi .t{font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.spi .t i{font-style:normal;color:var(--soft);font-weight:400}
+.spi p{margin:0;font-size:14px;color:var(--soft);line-height:1.4}.spi p.c{font-size:13px;opacity:.85}
+@media (max-width:900px){.fams{grid-template-columns:minmax(0,1fr)}}
+/* wardrobe */
+.two{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(20px,4vw,44px);align-items:start;margin-top:26px}
+.hats > img{border-radius:16px;border:3px solid var(--ink2);box-shadow:5px 6px 0 var(--ink2)}
+.price{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.price li{display:flex;justify-content:space-between;gap:8px;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:8px 12px;font-size:15px}
+.price li b{color:var(--gold);white-space:nowrap}
+.price li{align-items:center}.price li span{flex:1}.price li img{width:34px;height:34px;object-fit:contain;flex:none}
+.wslot{margin:18px 0 0;font-size:17px;color:var(--cyan)}
+@media (max-width:600px){.price{grid-template-columns:minmax(0,1fr)}}
+.earn{background:var(--panel);border:3px solid var(--ink2);border-radius:18px;padding:18px 20px;box-shadow:5px 6px 0 var(--ink2)}
+.earn h3{color:var(--gold);margin-bottom:8px}
+.earn ul{margin:0 0 6px;padding-left:20px;color:var(--soft)}
+.earn li{margin:4px 0}
+@media (max-width:820px){.two{grid-template-columns:minmax(0,1fr)}}
+/* online */
+.online{background:radial-gradient(90% 70% at 15% 0%,#3a1a66,var(--bg) 70%);border-top:3px solid var(--ink2)}
+.ranks{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:22px 0 8px;align-items:end}
+.rank{text-align:center}
+.rank .bar{border:3px solid var(--ink2);border-bottom:0;border-radius:12px 12px 0 0;background:var(--c);box-shadow:0 0 18px color-mix(in srgb,var(--c) 45%,transparent)}
+.rank b{display:block;font-size:15px;margin-top:8px;color:var(--c)}
+.rank small{color:var(--soft);font-size:14px;white-space:nowrap}
+.base{height:6px;background:var(--ink2);border-radius:4px}
+@media (max-width:640px){.ranks{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:26px}
+.card{background:var(--panel);border:3px solid var(--ink2);border-radius:18px;padding:18px 20px 10px;box-shadow:5px 6px 0 var(--ink2)}
+.card h3{color:var(--c,var(--cyan));margin-bottom:8px}
+.card p,.card li{color:var(--soft);font-size:16px}
+.card ul{padding-left:20px;margin:0 0 10px}
+@media (max-width:900px){.cols3{grid-template-columns:minmax(0,1fr)}}
+table{border-collapse:collapse;width:100%;font-size:15px}
+td{padding:6px 0;border-top:2px dashed var(--line);color:var(--soft)}
+td:last-child{text-align:right;color:var(--gold);font-weight:600;white-space:nowrap;padding-left:10px}
+/* controls */
+.ctl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:26px}
+.ctl .card td:last-child{color:var(--ink)}
+kbd{display:inline-block;min-width:30px;text-align:center;padding:2px 8px;border-radius:7px;background:var(--bg);border:2px solid var(--line);border-bottom-width:4px;font:600 14px Fredoka,sans-serif;color:var(--cyan);white-space:nowrap}
+@media (max-width:900px){.ctl{grid-template-columns:minmax(0,1fr)}}
+/* video + get */
+.video{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(20px,4vw,44px);align-items:center}
+.tv{position:relative;display:block;border-radius:18px;border:4px solid var(--ink2);overflow:hidden;box-shadow:0 0 0 4px var(--cyan),0 0 40px rgba(51,255,224,.35)}
+.tv img{aspect-ratio:16/9;object-fit:cover;width:100%;filter:brightness(.7)}
+.tv .play{position:absolute;inset:0;display:grid;place-items:center}
+.tv .play span{width:96px;height:96px;border-radius:50%;background:#ff2d55;border:4px solid var(--ink2);display:grid;place-items:center;box-shadow:4px 5px 0 var(--ink2)}
+.tv .play span::after{content:"";border-left:30px solid #fff;border-top:19px solid transparent;border-bottom:19px solid transparent;margin-left:8px}
+.tv:hover .play span,.tv:focus-visible .play span{transform:scale(1.06)}
+.tv:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.plats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+.plat{background:var(--panel);border:3px solid var(--ink2);border-radius:16px;padding:16px;box-shadow:4px 5px 0 var(--ink2)}
+.plat b{display:block;font:400 22px "Luckiest Guy",sans-serif;color:var(--gold)}
+.plat span{color:var(--soft);font-size:15px}
+@media (max-width:820px){.video{grid-template-columns:minmax(0,1fr)}}
+/* faq + footer */
+details{background:var(--panel);border:3px solid var(--ink2);border-radius:14px;padding:4px 18px;margin:10px 0;box-shadow:4px 4px 0 var(--ink2)}
+summary{cursor:pointer;font-weight:600;font-size:18px;padding:12px 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";display:inline-block;width:24px;color:var(--pink);font-weight:700}
+details[open] summary::before{content:"–"}
+details p{color:var(--soft)}
+summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
+footer{background:#0c0618;border-top:3px solid var(--ink2)}
+.foot{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:28px;align-items:center}
+.foot img.dw{width:150px;height:auto}
+.foot p{color:var(--soft);font-size:15px;margin:.2em 0}
+.foot img.lg{width:110px;height:110px}
+@media (max-width:700px){.foot{grid-template-columns:minmax(0,1fr)}}
+/* account terminal */
+#account-dialog{width:min(900px,calc(100vw - 24px));max-width:none;max-height:min(88vh,820px);padding:0;overflow:auto;border:3px solid var(--cyan);border-radius:20px;background:var(--bg);color:var(--ink);box-shadow:0 0 0 5px var(--ink2),0 0 50px rgba(51,255,224,.25)}
+#account-dialog::backdrop{background:rgba(7,3,14,.82);backdrop-filter:blur(7px)}
+.account-shell{position:relative;padding:clamp(20px,4vw,36px);background:radial-gradient(ellipse at 100% 0,rgba(51,255,224,.12),transparent 40%),linear-gradient(145deg,var(--bg2),var(--bg) 62%)}
+.account-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.account-kicker{display:block;color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.account-head h2{margin-top:5px;font-size:clamp(30px,5vw,44px)}
+.account-close{width:42px;height:42px;flex:none;border:2px solid var(--line);border-radius:10px;background:var(--ink2);color:var(--ink);font-size:23px;cursor:pointer}
+.account-close:hover,.account-close:focus-visible{border-color:var(--pink);color:var(--pink);outline:2px solid var(--gold);outline-offset:2px}
+.account-body{padding-top:22px}
+.account-layout{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:22px}
+.account-card{padding:clamp(18px,3vw,26px);border:2px solid var(--line);border-radius:16px;background:rgba(18,8,32,.78);box-shadow:5px 6px 0 var(--ink2)}
+.account-card h3{margin-bottom:8px;color:var(--gold)}
+.account-card p{color:var(--soft);font-size:15px}
+.account-form{display:grid;gap:13px;margin-top:18px}
+.account-form label{display:grid;gap:6px;color:var(--ink);font-size:14px;font-weight:700}
+.account-form input:not([type=checkbox]){width:100%;min-height:46px;padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:#10071d;color:var(--ink);font:600 16px Fredoka,sans-serif}
+.account-form input:focus{border-color:var(--cyan);outline:3px solid rgba(51,255,224,.2)}
+.account-form button,.account-action{min-height:45px;padding:10px 15px;border:2px solid var(--ink2);border-radius:10px;background:var(--pink);color:#fff;font:700 16px Fredoka,sans-serif;cursor:pointer;box-shadow:3px 4px 0 var(--ink2)}
+.account-form button:hover,.account-action:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.account-form button:disabled,.account-action:disabled{opacity:.6;cursor:wait;transform:none}
+.account-link{justify-self:start;padding:4px 0;border:0;background:none;color:var(--cyan);font:600 14px Fredoka,sans-serif;text-decoration:underline;cursor:pointer}
+.account-link:hover,.account-link:focus-visible{color:var(--gold)}
+.account-layout.register-mode{grid-template-columns:minmax(0,1fr)}
+.account-register-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.account-register-grid .full{grid-column:1/-1}
+.account-field-error{min-height:1em;color:#ff9b80;font-size:12px;font-weight:600}
+.account-form input[aria-invalid=true]{border-color:#ff9b80}
+.account-check{display:flex!important;grid-template-columns:auto 1fr;align-items:start;gap:9px!important;color:var(--soft)!important;font-weight:400!important}
+.account-check input{width:18px;height:18px;margin:2px 0;accent-color:var(--cyan)}
+.account-check small{display:block;margin-top:2px;color:var(--soft);font-size:12px}
+.account-message{min-height:1.5em;margin:0!important;color:var(--cyan)!important;font-size:14px!important}
+.account-message[data-error=true]{color:#ff9b80!important}
+.account-code{letter-spacing:.22em;text-align:center;font-size:21px!important}
+.account-profile{display:grid;gap:16px}
+.account-id{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.account-id b{font:400 25px "Luckiest Guy",Fredoka,sans-serif;color:var(--cyan)}
+.account-email{overflow-wrap:anywhere;color:var(--soft);font-size:14px}
+.account-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.account-stat{min-height:86px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.account-stat span{display:block;color:var(--soft);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.account-stat b{display:block;margin-top:5px;color:var(--gold);font:400 22px "Luckiest Guy",Fredoka,sans-serif;overflow-wrap:anywhere}
+.account-collections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.account-collection{padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(42,23,72,.72)}
+.account-collection h4{margin:0 0 8px;color:var(--pink);font:400 16px "Luckiest Guy",Fredoka,sans-serif}
+.account-chips{display:flex;flex-wrap:wrap;gap:6px}
+.account-chip{padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:var(--ink2);color:var(--soft);font-size:12px}
+.account-empty{color:var(--soft);font-size:13px}
+.account-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.account-logout{background:transparent;color:var(--ink);border-color:var(--line);box-shadow:none}
+.account-season{color:var(--soft);font-size:13px}
+[hidden]{display:none!important}
+@media (max-width:700px){.account-layout{grid-template-columns:minmax(0,1fr)}.account-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.account-collections{grid-template-columns:1fr}.account-id b{font-size:21px}}
+@media (max-width:520px){.account-register-grid{grid-template-columns:minmax(0,1fr)}.account-register-grid .full{grid-column:auto}}
+</style>
+</head>
+<body>
+<nav aria-label="Main navigation"><div class="nav">
+  <a class="brand" href="#top"><img src="img/logo.png" alt=""><span>i-Pet 2096</span></a>
+  <div class="nav-actions">
+    <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu" aria-label="Open site sections">
+      <span class="menu-icon" aria-hidden="true"><i></i><i></i><i></i></span><span class="menu-label">Explore</span>
+    </button>
+    <button class="account-trigger register-trigger" id="register-trigger" type="button" aria-haspopup="dialog" aria-controls="account-dialog">Register</button>
+    <button class="account-trigger" id="account-trigger" type="button" aria-haspopup="dialog" aria-controls="account-dialog"><span aria-hidden="true">+</span><span id="account-trigger-label">Sign in</span></button>
+  </div>
+  <div class="menu-panel" id="site-menu" hidden>
+    <section class="menu-group" aria-label="Play">
+      <p class="menu-kicker">Play</p>
+      <div class="menu-group-links">
+        <a href="#how">How it plays</a><a href="#pets">Meet the pets</a><a href="#modes">Game modes</a><a href="#maps">Maps</a>
+      </div>
+    </section>
+    <section class="menu-group" aria-label="Your store">
+      <p class="menu-kicker">Your store</p>
+      <div class="menu-group-links">
+        <a href="#items">Items</a><a href="#specials">Special items</a><a href="#wardrobe">Wardrobe</a><a href="#profile">Player profile</a>
+      </div>
+    </section>
+    <section class="menu-group" aria-label="Online and help">
+      <p class="menu-kicker">Online &amp; help</p>
+      <div class="menu-group-links">
+        <a href="#online">Online play</a><a href="#controls">Controls</a><a href="#get">Get the game</a><a href="#faq">FAQ</a>
+      </div>
+    </section>
+  </div>
+</div></nav>
+
+<header class="band hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <h1 class="sign">i-PET<small>Cyber Store</small><b>2096</b></h1>
+      <p class="version-mark">Game version <b>1.10.9 beta</b></p>
+      <p class="lead">Hide-and-seek after closing time. The pet shop's lights go down, the cyborg pets climb out of their pods, and the Catchers start counting. Squeeze into shelves, boxes and beds, trip the hunters with gadgets, and break your friends out of the Sin Bin before the clock runs out.</p>
+      <div class="cta">
+        <button class="btn pink register-trigger" id="hero-register-trigger" type="button" aria-haspopup="dialog" aria-controls="account-dialog">Create free account</button>
+        <a class="btn cyan" href="#get">Get the game</a>
+        <a class="btn ghost" href="https://youtu.be/UhGFwTFarVM">Watch How to Play</a>
+      </div>
+      <div class="server-status" id="server-status" data-state="checking" role="status" aria-live="polite" aria-atomic="true">
+        <span class="server-led" aria-hidden="true"></span><span id="server-status-text">Checking the lobby…</span>
+      </div>
+      <ul class="facts">
+        <li><b>16</b> cyborg pets</li><li><b>10</b> game modes</li><li><b>7</b> maps</li><li><b>21</b> items</li><li>Online with up to <b>8</b> friends</li>
+      </ul>
+    </div>
+    <div>
+      <div class="window">
+        <span class="tag">Open after dark</span>
+        <img class="shot" src="img/megastore_classic.jpg" alt="The Mega Store at night: the i-Pet fountain, checkout counters and pets sneaking between shelves">
+      </div>
+      <div class="parade" id="parade"></div>
+      <div class="floor"></div>
+    </div>
+  </div>
+</header>
+
+<section class="band" id="how">
+  <div class="wrap">
+    <h2>How a round works</h2>
+    <p class="lead">Every match is a short burst of sneaking. Hiders try to stay out of sight until the timer hits zero. Catchers sniff out every last pet.</p>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><h3>Hide</h3>
+        <p>The Catcher counts. Walk into a shelf, box, pet bed, carrier, dryer or pod to vanish inside it, or slip through squeeze gaps that only hiders can use. Once you're hidden, peek to see where the Catchers are.</p>
+        <div class="chips"><span>Hiding spots</span><span>Squeeze gaps</span><span>Peeking</span></div></div>
+      <div class="step"><span class="n">2</span><h3>Seek</h3>
+        <p>Catchers sniff spots and follow paw prints. If one finds yours, burst out and run. Sprinting is fast but noisy, and a sneeze can be heard across the room. In the final 30 seconds hidden hearts start to pound, so change spots now and then.</p>
+        <div class="chips"><span>Paw prints</span><span>Noise</span><span>Final 30 seconds</span></div></div>
+      <div class="step"><span class="n">3</span><h3>Rescue</h3>
+        <p>Caught pets go to the glass Sin Bin. Play a break-out mini-game to escape, or wait for a friend to stand on the glowing rescue pad and free everyone. Sometimes a caught pet gets the offer to turn Turncoat and hunt for the other side.</p>
+        <div class="chips"><span>Lock Pick</span><span>Laser Gate</span><span>Code Pad</span><span>Wire Snip</span><span>Paw Rhythm</span><span>Tunnel Dig</span><span>Memory Bowl</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="pets">
+  <div class="wrap">
+    <h2>Meet the pets</h2>
+    <p class="lead">Sixteen baby cyborg pets, each with its own name, story and robot parts. Pick your favourite before every match, then dress it up in the Wardrobe.</p>
+    <p class="night">Every pet that comes through the doors gets the same friendly upgrade from the Robo-Vet: a glowing cyan eye, a light-up collar, one robot leg or arm and a little chest core. The upgrades work a bit too well. At 22:00 the shutters roll down and the pets climb out of their display pods to play hide-and-seek. The rule is simple: be back in your pod before the doors open at 08:00, and never leave a friend behind.</p>
+    <p class="note" style="margin-top:4px">Tap a pet to read its story.</p>
+    <div class="pets" id="petgrid" role="group" aria-label="Choose a pet"></div>
+    <article class="story" id="story" aria-live="polite"></article>
+    <p class="note">Every pet plays the same, so pick the one you like best.</p>
+  </div>
+</section>
+
+<section class="band" id="modes">
+  <div class="wrap">
+    <h2>Ten ways to play</h2>
+    <p class="lead">Every mode has its own settings in Custom Match, from tag-back timers to how dark Blackout gets. Quick Play picks a mode and map for you.</p>
+    <div class="modes" id="modegrid"></div>
+  </div>
+</section>
+
+<section class="band alt" id="maps">
+  <div class="wrap">
+    <h2>Seven places to sneak through</h2>
+    <p class="lead">Seven maps are ready for offline play. Online rooms currently use the Mega Store, Robo-Vet, Warehouse and Sky Garden.</p>
+    <div class="maps" id="mapgrid"></div>
+  </div>
+</section>
+
+<section class="band" id="items">
+  <div class="wrap">
+    <h2>21 gadgets and tricks</h2>
+    <p class="lead">Glowing boxes hold items. Switch between the ones you're carrying and use them at the right moment. Custom Match sets how many of each family appear.</p>
+    <div class="fams" id="famgrid"></div>
+  </div>
+</section>
+
+<section class="band alt" id="specials">
+  <div class="wrap">
+    <h2>Special items and machines</h2>
+    <p class="lead">Win, find or buy special items, keep them in your Inventory and take one into a match. Each one works once: use it and it's gone. Get caught before you use it and you'll get it back when you're freed. There are 28 to collect: 16 from the pets' toy boxes and 12 store items.</p>
+    <div class="howsp">
+      <div class="hs"><h3>Collect them</h3><p>Items come in three rarities: Common (7 in 10), Rare (1 in 4) and Legendary (1 in 20). You can hold up to 5 of each and find up to 6 a day. Any extras turn into 10 bolts. Equip one on the Inventory page before a match.</p></div>
+      <div class="hs"><h3>Bolt tokens</h3><p>Spinning nuts pop up on the floor while the Catchers search. Hiders grab them: each nut is worth 10 bolts, up to 50 a match (100 in Free Roam). Get caught and you drop half. Whatever is in your pocket at the end is yours.</p></div>
+      <div class="hs"><h3>Lucky finds</h3><p>Stay in a hiding spot for 5 seconds and there's a 1 in 10 chance of finding a special item tucked inside. One lucky find a match.</p></div>
+      <div class="hs mach"><img src="img/claw.png" alt="The claw machine"><div><h3>Claw machine</h3><p>2 bolts a try, 3 tries a match, and about 1 win in 5. It flashes and jingles while you play, so the Catchers can hear you.</p></div></div>
+      <div class="hs mach"><img src="img/vending.png" alt="The vending machine"><div><h3>Vending machine</h3><p>A sticky note with a 3-digit code is hidden in one hiding spot. Hide there to find it. Type the code and you get 8 seconds of safety to pick any Common or Rare item. No code? Pay 100 bolts instead, with no safety. One item a match.</p></div></div>
+    </div>
+    <h3 style="margin-top:30px;color:var(--gold)">All 28 items</h3>
+    <div class="spx" id="spgrid"></div>
+  </div>
+</section>
+
+<section class="band" id="wardrobe">
+  <div class="wrap">
+    <h2>Wardrobe, bolts and daily challenges</h2>
+    <p class="lead">Dress your pet from head to tail: a hat, glasses, a collar and something on its back, all worn at once. 26 items to collect, and every one moves with your pet as it runs, hops and turns. Other players see your outfit online.</p>
+    <div class="two">
+      <div class="hats"><img src="img/wardrobe.jpg" alt="The Wardrobe page: Pixel the Kitten wearing a Wizard Hat, Star Shades, a Bandana and a Super Cape, with tabs for Hats, Glasses, Collars and Back" loading="lazy">
+        <div id="wardlist"></div></div>
+      <div class="earn"><h3>Earn bolts by playing</h3>
+        <ul><li>+5 bolts for every match you finish</li><li>+10 more when your side wins</li><li>+5 more for surviving the final 30 seconds</li><li>Five new daily challenges every day</li><li>Buy up to five bonus challenge slots for tougher goals</li><li>+60 bolts each when your Pack finishes its weekly Pack Heist</li><li>10 bolts for every bolt token you grab (up to 50 a match)</li><li>Gift codes from The Data Wizard</li></ul>
+        <p>Spend bolts in the Wardrobe, on claw machine tries and on vending machine items. In the Wardrobe, hover over any item to try it on before you buy. Goldfish can't wear collars or back items (the bowl's in the way), and snakes can't wear back items.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="profile">
+  <div class="wrap">
+    <h2>Your profile and badges</h2>
+    <p class="lead">Press the Profile card on the home screen to see your night-shift record: your rank and Paw Points, your collections, lifetime numbers and favourites, and 12 badges to earn.</p>
+    <div class="prof">
+      <img src="img/profile.jpg" alt="The Profile page: your pet, rank, collections, lifetime numbers and badges">
+      <div>
+        <h3>What it shows</h3>
+        <ul><li>Your tag, pet and hat, with your season rank and progress to the next one</li><li>Matches, wins, catches, rescues, break-outs, time hidden, close calls and items used</li><li>Your favourite pet, mode and map</li><li>Special items found, Wardrobe items owned, bolts and badges</li></ul>
+        <h3>Gift codes</h3>
+        <p>Got a 12-digit gift code? Press <b>Redeem a code</b> on your Profile page and type it in for bolts, special items or a Wardrobe item. Each code works once and has an end date, so use it quickly. You need to be online to redeem.</p>
+      </div>
+    </div>
+    <h3 style="margin-top:30px;color:var(--gold)">12 badges to earn</h3>
+    <div class="bdgs"><div class="bdg"><img src="img/badge/first.png" alt="" loading="lazy"><b>First Night</b><span>Finish your first match</span></div><div class="bdg"><img src="img/badge/regular.png" alt="" loading="lazy"><b>Night Shift Regular</b><span>Play 50 matches</span></div><div class="bdg"><img src="img/badge/rescuer.png" alt="" loading="lazy"><b>Rescue Ranger</b><span>Rescue 25 pets from the Sin Bin</span></div><div class="bdg"><img src="img/badge/escape.png" alt="" loading="lazy"><b>Escape Artist</b><span>Win 25 break-outs</span></div><div class="bdg"><img src="img/badge/catcher.png" alt="" loading="lazy"><b>Top Catcher</b><span>Catch 50 hiders</span></div><div class="bdg"><img src="img/badge/ghost.png" alt="" loading="lazy"><b>Ghost of the Aisles</b><span>Stay hidden for 1 hour in total</span></div><div class="bdg"><img src="img/badge/close.png" alt="" loading="lazy"><b>Close Shave</b><span>Survive 50 close calls</span></div><div class="bdg"><img src="img/badge/tourist.png" alt="" loading="lazy"><b>Store Tourist</b><span>Win on all 7 maps</span></div><div class="bdg"><img src="img/badge/modes.png" alt="" loading="lazy"><b>Mode Master</b><span>Win in 6 different modes</span></div><div class="bdg"><img src="img/badge/collector.png" alt="" loading="lazy"><b>Collector</b><span>Find all 28 special items</span></div><div class="bdg"><img src="img/badge/fashion.png" alt="" loading="lazy"><b>Fashion Pet</b><span>Own 20 Wardrobe items</span></div><div class="bdg"><img src="img/badge/champion.png" alt="" loading="lazy"><b>Hard Champion</b><span>Win 25 matches on Hard</span></div></div>
+  </div>
+</section>
+
+<section class="band online" id="online">
+  <div class="wrap">
+    <h2>Play online</h2>
+    <p class="lead">Make a room and share its code, or browse open games. Up to 8 players per room, with computer pets filling the gaps. Chat is filtered and players can be reported. Your progress is saved on the i-Pet server.</p>
+    <p>The host can switch on <b>Special items &amp; machines</b>. Everyone brings their equipped item, and bolt tokens, the claw and vending machines and lucky finds work for every player. These games don't count for Paw Points, so the leaderboards stay fair. Pack-only games always keep special items off.</p>
+    <p>A name bubble floats over every pet: players show their tag, Pack tag and rank, and computer pets get their own made-up tags starting with "cbot". A hidden pet on the other side never shows its bubble, so tags can't give anyone away. Turn bubbles to "Players only" or off in Settings.</p>
+    <h3 style="margin-top:28px;color:var(--gold)">Paw Points and season ranks</h3>
+    <p>Online matches earn Paw Points. Climb six ranks every monthly "Stocktake" season. Your rank shows as a coloured dot next to your name.</p>
+    <div class="ranks" id="ranks"></div><div class="base"></div>
+    <div class="cols3">
+      <div class="card" style="--c:var(--gold)"><h3>How you earn points</h3>
+        <table id="pptable"></table>
+        <p style="font-size:14px;margin-top:10px">Matches must last at least a minute with 2 or more players. Up to 150 points per match and 1,500 a day.</p></div>
+      <div class="card" style="--c:var(--pink)"><h3>Pet of the Week</h3>
+        <p>Weekly and season leaderboards, with tabs for Hiders, Catchers and Packs. You always see the top 10 and the pets just above and below you.</p>
+        <p>Last week's number one appears as a golden hologram statue above the Mega Store fountain, wearing their hat, for every player to see.</p></div>
+      <div class="card" style="--c:var(--green)"><h3>Packs</h3>
+        <ul><li>Build a crew of 6–40 pets with its own patch and invite code</li><li>Pack chat, Pack-only games and gifts between mates</li><li>A weekly Pack Heist goal earns bolts for everyone</li><li>Choose one of four factions and compete for weekly points and prizes</li><li>Turf Wars: the Pack with the most points on a map that week flies its banner there</li></ul></div>
+    </div>
+    <p class="note">You can play without registering. An account keeps your saved game profile on the server so it can sync between devices.</p>
+  </div>
+</section>
+
+<section class="band alt" id="controls">
+  <div class="wrap">
+    <h2>Controls</h2>
+    <p class="lead">Play with keyboard and mouse, a controller or touch. On-screen prompts switch by themselves to match what you're using.</p>
+    <div class="ctl">
+      <div class="card"><h3>Keyboard</h3><table>
+        <tr><td>Move</td><td><kbd>W A S D</kbd> or arrows</td></tr><tr><td>Sprint, or peek while hidden</td><td><kbd>Shift</kbd></td></tr><tr><td>Sneeze</td><td><kbd>Space</kbd></td></tr><tr><td>Use item or break out</td><td><kbd>E</kbd></td></tr><tr><td>Switch item</td><td><kbd>Q</kbd> or wheel</td></tr><tr><td>Mute</td><td><kbd>M</kbd></td></tr><tr><td>Pause</td><td><kbd>Esc</kbd></td></tr></table></div>
+      <div class="card"><h3>Controller</h3><table>
+        <tr><td>Move</td><td>Left stick</td></tr><tr><td>Sprint or peek</td><td><kbd>B</kbd></td></tr><tr><td>Sneeze</td><td><kbd>A</kbd></td></tr><tr><td>Use item or break out</td><td><kbd>X</kbd></td></tr><tr><td>Switch item</td><td><kbd>LB</kbd> <kbd>RB</kbd></td></tr><tr><td>Menu tabs</td><td><kbd>LB</kbd> <kbd>RB</kbd></td></tr><tr><td>Start a match</td><td><kbd>Y</kbd></td></tr></table></div>
+      <div class="card"><h3>Touch</h3><table>
+        <tr><td>Move</td><td>Floating stick</td></tr><tr><td>Sprint or peek</td><td><kbd>RUN</kbd></td></tr><tr><td>Sneeze</td><td><kbd>SNEEZE</kbd></td></tr><tr><td>Use item</td><td><kbd>USE</kbd></td></tr><tr><td>Switch item</td><td><kbd>SWITCH</kbd></td></tr></table>
+        <p style="font-size:14px;margin-top:10px">Button size can be changed in Settings.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="get">
+  <div class="wrap video">
+    <a class="tv" href="https://youtu.be/UhGFwTFarVM" aria-label="Watch the How to Play video on YouTube">
+      <img src="img/menu.jpg" alt="The i-Pet Cyber Store main menu"><span class="play"><span></span></span></a>
+    <div>
+      <h2>Get the game</h2>
+      <p>New to the store? The six-minute How to Play video walks through hiding, seeking, items and every mode.</p>
+      <div class="plats">
+        <div class="plat"><b>Windows</b><span>PC build, version 1.10.9 beta</span></div>
+        <div class="plat"><b>Android</b><span>Phone and tablet build, version 1.10.9 beta</span></div>
+      </div>
+      <p class="note">Download links are coming soon. Watch The Data Wizard's YouTube channel for the release.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="faq">
+  <div class="wrap">
+    <h2>Questions</h2>
+    <details><summary>Can I play on my own?</summary><p>Yes. Every mode works offline with computer pets as Hiders and Catchers. Pick an easy, normal or hard difficulty, and up to 30 computer teammates.</p></details>
+    <details><summary>Who are the "cbot" players?</summary><p>They're the computer pets. Each one gets a random tag like cbot4821 in its name bubble, so you can tell who's who in a crowded match.</p></details>
+    <details><summary>How many people can play online?</summary><p>Up to 8 players in a room. Computer pets fill the empty places so matches always feel busy.</p></details>
+    <details><summary>Do I need an account?</summary><p>No. You can play without one. To sync your saved game profile between devices, register here or in the game. No email code is required; use an email address you can access for password recovery. Sign into the updated game once to link its local profile to an account created here.</p></details>
+    <details><summary>How do I reset my password?</summary><p>Choose Sign in, then Forgot password. A reset code is sent to the email address on your account. Reset email delivery depends on the game server's email settings.</p></details>
+    <details><summary>Is online chat safe?</summary><p>Chat is filtered, quick-chat phrases are built in, and players can be reported or removed from a room by its host.</p></details>
+    <details><summary>Which modes can I play online?</summary><p>Classic matches are online today. Every mode can be played offline.</p></details>
+    <details><summary>What are bolts for?</summary><p>Bolts buy Wardrobe items, claw machine tries and vending machine items. You earn them by finishing matches, winning, surviving the final 30 seconds, daily challenges, your Pack's weekly goal and bolt tokens you grab in a match.</p></details>
+    <details><summary>What are gift codes?</summary><p>12-digit codes The Data Wizard shares for bolts, special items or Wardrobe items. Redeem one on your Profile page while you're online. Each code works once, for one player, and runs out after its end date.</p></details>
+    <details><summary>Can I buy special items?</summary><p>No. Nothing in the game costs real money. You win special items at the claw machine, pick them at the vending machine or find them in hiding spots.</p></details>
+    <details><summary>Are special items fair online?</summary><p>They're off unless the host switches them on, and games with special items don't count for Paw Points. Every item has a counter, so the other side can fight back.</p></details>
+  </div>
+</section>
+
+<footer class="band">
+  <div class="wrap foot">
+    <img class="dw" src="img/datawizard.png" alt="The Data Wizard logo">
+    <div><p><b style="color:var(--ink)">The Data Wizard presents i-Pet Cyber Store 2096.</b></p>
+      <p>Made with Godot. Version 1.10.9 beta, November 2026.</p>
+      <p><a href="https://youtu.be/UhGFwTFarVM">How to Play on YouTube</a> · <a href="#top">Back to the top</a></p></div>
+    <img class="lg" src="img/logo.png" alt="i-Pet Cyber Store 2096 logo">
+  </div>
+</footer>
+
+<dialog id="account-dialog" aria-labelledby="account-title">
+  <div class="account-shell">
+    <div class="account-head">
+      <div><span class="account-kicker">i-Pet player terminal · secure sign-in</span><h2 id="account-title">Your account</h2></div>
+      <button class="account-close" id="account-close" type="button" aria-label="Close account window">×</button>
+    </div>
+    <div class="account-body">
+      <section id="account-signed-out" class="account-layout" aria-label="Sign in, register, or reset your password">
+        <div class="account-card" id="account-login-view">
+          <h3>Welcome back</h3>
+          <p>Use the email and password for your i-Pet account.</p>
+          <form class="account-form" id="account-login-form">
+            <label>Email address<input id="account-login-email" name="email" type="email" autocomplete="username" maxlength="254" required></label>
+            <label>Password<input id="account-login-password" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+            <label class="account-check"><input id="account-remember" name="remember" type="checkbox"><span>Remember me on this device<small>This keeps you signed in; this website never saves your password.</small></span></label>
+            <button type="submit" id="account-login-submit">Sign in</button>
+            <p class="account-message" id="account-login-message" role="status" aria-live="polite"></p>
+            <button class="account-link" id="account-forgot" type="button">Forgot password?</button>
+            <button class="account-link" id="account-create" type="button">Create a new account</button>
+          </form>
+        </div>
+        <div class="account-card" id="account-register-view" hidden>
+          <h3>Create your player account</h3>
+          <p>No email code is required. Your local game profile will be linked safely the first time you sign in to the updated game.</p>
+          <form class="account-form" id="account-register-form" novalidate>
+            <div class="account-register-grid">
+              <label class="full">Email address
+                <input id="account-register-email" name="email" type="email" autocomplete="email" maxlength="254" data-validate required aria-describedby="account-register-email-error">
+                <small class="account-field-error" id="account-register-email-error" aria-live="polite"></small>
+              </label>
+              <label>Username
+                <input id="account-register-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="24" data-validate required aria-describedby="account-register-username-error">
+                <small class="account-field-error" id="account-register-username-error" aria-live="polite"></small>
+              </label>
+              <label>Country
+                <input id="account-register-country" name="country" type="text" autocomplete="country-name" maxlength="80" data-validate required aria-describedby="account-register-country-error">
+                <small class="account-field-error" id="account-register-country-error" aria-live="polite"></small>
+              </label>
+              <label>First name
+                <input id="account-register-first-name" name="first_name" type="text" autocomplete="given-name" maxlength="80" data-validate required aria-describedby="account-register-first-name-error">
+                <small class="account-field-error" id="account-register-first-name-error" aria-live="polite"></small>
+              </label>
+              <label>Surname
+                <input id="account-register-surname" name="surname" type="text" autocomplete="family-name" maxlength="80" data-validate required aria-describedby="account-register-surname-error">
+                <small class="account-field-error" id="account-register-surname-error" aria-live="polite"></small>
+              </label>
+              <label>Age
+                <input id="account-register-age" name="age" type="number" min="0" max="120" step="1" inputmode="numeric" data-validate required aria-describedby="account-register-age-error">
+                <small class="account-field-error" id="account-register-age-error" aria-live="polite"></small>
+              </label>
+              <label>Date of birth
+                <input id="account-register-dob" name="date_of_birth" type="date" data-validate required aria-describedby="account-register-dob-error">
+                <small class="account-field-error" id="account-register-dob-error" aria-live="polite"></small>
+              </label>
+              <label>Password
+                <input id="account-register-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" data-validate required aria-describedby="account-register-password-error">
+                <small class="account-field-error" id="account-register-password-error" aria-live="polite"></small>
+              </label>
+              <label>Confirm password
+                <input id="account-register-confirm" name="confirm_password" type="password" autocomplete="new-password" minlength="10" maxlength="128" data-validate required aria-describedby="account-register-confirm-error">
+                <small class="account-field-error" id="account-register-confirm-error" aria-live="polite"></small>
+              </label>
+            </div>
+            <label class="account-check"><input id="account-register-remember" name="remember" type="checkbox"><span>Remember me on this device<small>This keeps you signed in; this website never saves your password.</small></span></label>
+            <button type="submit" id="account-register-submit">Create account</button>
+            <p class="account-message" id="account-register-message" role="status" aria-live="polite"></p>
+            <button class="account-link" id="account-register-back" type="button">Already have an account? Sign in</button>
+          </form>
+        </div>
+        <div class="account-card" id="account-reset-request-view" hidden>
+          <h3>Request a reset code</h3>
+          <p>Enter your account email. If an account matches, we'll send a six-digit code that expires in 15 minutes.</p>
+          <form class="account-form" id="account-reset-request-form">
+            <label>Email address<input id="account-reset-email" name="email" type="email" autocomplete="email" maxlength="254" required></label>
+            <button type="submit" id="account-reset-request-submit">Email me a code</button>
+            <p class="account-message" id="account-reset-request-message" role="status" aria-live="polite"></p>
+            <button class="account-link" id="account-reset-back" type="button">Back to sign in</button>
+          </form>
+        </div>
+        <div class="account-card" id="account-reset-confirm-view" hidden>
+          <h3>Choose a new password</h3>
+          <p>Enter the code from your email and set a password with 10 to 128 characters.</p>
+          <form class="account-form" id="account-reset-confirm-form">
+            <label>Email address<input id="account-confirm-email" name="email" type="email" autocomplete="email" maxlength="254" required></label>
+            <label>Six-digit code<input class="account-code" id="account-reset-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
+            <label>New password<input id="account-new-password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
+            <button type="submit" id="account-reset-confirm-submit">Save new password</button>
+            <p class="account-message" id="account-reset-confirm-message" role="status" aria-live="polite"></p>
+            <button class="account-link" id="account-reset-back-confirm" type="button">Back to sign in</button>
+          </form>
+        </div>
+        <div class="account-card" id="account-promo">
+          <h3>Your profile travels with you</h3>
+          <p>Bolts, your wardrobe, special items, badges and lifetime stats are saved with your account.</p>
+          <p>New here? Register on this site or in the game. Your saved game profile is linked when you first sign in from the updated game.</p>
+          <p class="note">The site stores only an expiring server session in a protected cookie, never your password.</p>
+        </div>
+      </section>
+      <section id="account-signed-in" class="account-profile" hidden aria-label="Your saved game profile">
+        <div class="account-card account-id">
+          <div><span class="account-kicker">Player profile</span><b id="account-player-tag">Your pet</b><div class="account-email" id="account-email"></div></div>
+          <span class="account-chip" id="account-pet-label">Pet profile</span>
+        </div>
+        <div class="account-stats" aria-label="Profile highlights">
+          <div class="account-stat"><span>Bolts</span><b data-account-value="bolts">—</b></div>
+          <div class="account-stat"><span>Lifetime matches</span><b data-account-value="matches">—</b></div>
+          <div class="account-stat"><span>Lifetime wins</span><b data-account-value="wins">—</b></div>
+          <div class="account-stat"><span>Paw Points</span><b data-account-value="points">—</b></div>
+        </div>
+        <div class="account-card">
+          <div class="account-id"><h3>Record &amp; collections</h3><span class="account-season" id="account-season-label">Rank loading</span></div>
+          <div class="account-collections">
+            <section class="account-collection"><h4>Badges</h4><div class="account-chips" id="account-badges"></div></section>
+            <section class="account-collection"><h4>Wardrobe</h4><div class="account-chips" id="account-wardrobe"></div></section>
+            <section class="account-collection"><h4>Special items</h4><div class="account-chips" id="account-specials"></div></section>
+            <section class="account-collection"><h4>Equipped look</h4><div class="account-chips" id="account-outfit"></div></section>
+          </div>
+        </div>
+        <div class="account-footer"><p class="account-message" id="account-profile-message" role="status" aria-live="polite"></p><button class="account-action account-logout" id="account-logout" type="button">Sign out</button></div>
+      </section>
+    </div>
+  </div>
+</dialog>
+
+<script>
+{
+const PETS = ["Puppy","Kitten","Bunny","Hamster","Mouse","Rat","Guinea Pig","Chinchilla","Ferret","Hedgehog","Lizard","Frog","Snake","Turtle","Macaw","Goldfish"];
+const file = n => n.toLowerCase().replace(" ", "_");
+const PET_INFO = [{"kind": "Puppy", "name": "Cody", "tag": "The heart of the pack.", "hook": "Brave, loyal and a little too loud, Cody is the leader every other pet follows into the dark.", "origin": "Cody arrived on opening day as the store's very first pet, all paws and floppy ears. On his first night he chased a runaway hover-mop across the Mega Store, skidded into the fountain and hurt his front leg. The Robo-Vet built him a chrome leg with glowing cyan rings and red power cables, and Cody decided it made him the fastest puppy in the city. It doesn't, but nobody has the heart to tell him.", "play": "He invented hide-and-seek to cheer up the new arrivals on their first scary night, and he still makes up the rules as he goes. Cody is a terrible hider (his tail wags when he's excited) but the best rescuer in the store. If anyone is stuck in the Sin Bin, he's already running for the rescue pad.", "parts": "cyan eye plate, chrome front leg with glowing rings, light-up collar, chest core", "spot": "the pet beds by the checkout, because they smell like biscuits", "mode": "Classic, for the rescues", "quote": "No pet left in the Sin Bin!", "treat": "bacon-flavoured bolt biscuits", "toy": "a squeaky chrome tennis ball"}, {"kind": "Kitten", "name": "Pixel", "tag": "The curious scout.", "hook": "Quiet, quick and nosy, Pixel is the pet who has to see everything first.", "origin": "Pixel was found asleep in a crate of laser pointers in the stockroom, three days after the delivery van left. She had been chasing the little red dots inside the box until the batteries ran out. When the Robo-Vet fitted her scanner eye, a stray laser part got mixed in, so it still flickers red-dot whenever she spots something interesting. She pretends that doesn't happen.", "play": "Pixel is Cody's best friend and his total opposite: where he charges in, she watches. Before every round she maps the room in her head and whispers the best routes to the others. She's almost impossible to find, but she can't resist peeking out to see what's going on, and that's how Catchers get her.", "parts": "cyan scanner eye, chrome front leg, glowing collar, chest core", "spot": "the top shelf of the cat tree, where nobody thinks to look", "mode": "Blackout", "quote": "Seen it. Mapped it. Gone.", "treat": "tuna crunchies", "toy": "the old laser pointer from her crate, batteries long gone"}, {"kind": "Bunny", "name": "Hopscotch", "tag": "The speed demon.", "hook": "Hopscotch can't keep still, which makes hiding the hardest part of her night.", "origin": "She grew up on a hover-farm outside the city, racing the harvester drones down the carrot rows. One morning she out-hopped the fastest drone on the farm and crashed straight into the fence at the finish line. The Robo-Vet rebuilt her hind leg with a spring that goes boing on every jump. The farm sent her to the store because she kept beating their machines.", "play": "Hopscotch is the store's fastest runner and always the first to volunteer as Catcher. As a hider she lasts about ten seconds before she gets bored and starts hopping. Her ears twitch when she's thinking, so the others always know when she's close.", "parts": "cyan eye, spring-loaded robot leg, collar, chest core", "spot": "the Sky Garden planters", "mode": "Tag", "quote": "Ready or not, here I hop!", "treat": "neon carrot sticks", "toy": "a bouncy spring ball"}, {"kind": "Hamster", "name": "Nugget", "tag": "The hoarder.", "hook": "Round, cheerful and always chewing, Nugget has never met a snack he didn't want to keep.", "origin": "Nugget was the store's wheel-running champion, and he ran so hard one night that his wheel's motor overloaded with a puff of smoke. He tried to catch himself and sprained his front paw. The Robo-Vet gave him a tiny chrome arm, which he mostly uses to stuff more kibble into his cheeks. His pouches are full at all times, occasionally of things he swears he didn't pick up.", "play": "Nugget is surprisingly good at squeezing through the tightest gaps and tucking into corners. He's a slow runner, so his trick is to hide early and stay put. If anything goes missing during a round, check his cheeks first.", "parts": "cyan eye, chrome front paw, glowing collar, chest core", "spot": "inside the kibble sacks on the loading dock", "mode": "Kibble Heist, obviously", "quote": "I'm saving it for later!", "treat": "sunflower seeds, by the cheekful", "toy": "his old running wheel, now with no motor"}, {"kind": "Mouse", "name": "Tinker", "tag": "The inventor.", "hook": "Small, shy and brilliant, Tinker builds the gadgets everyone else uses.", "origin": "Tinker never came through the front door. She moved into the vent behind the Robo-Vet clinic one winter and lived on dropped crumbs and spare screws. When the Robo-Vet caught her rewiring its own tool arm, it didn't chase her out. It built her a robot hand with a tiny screwdriver tip and gave her a key to the parts drawer, and she's been part of the store ever since.", "play": "The Decoy Squeaker, the Tripwire Bell and the Bubble Bomb are all Tinker's. Her big ears hear a Catcher coming three aisles away, so she's hard to surprise. She hates being chased, but she loves watching one of her inventions save a friend.", "parts": "cyan eye, robot hand with a tiny screwdriver tip, collar, chest core", "spot": "the vent grates", "mode": "The Mole, because she likes a puzzle", "quote": "Give me a minute and a paperclip.", "treat": "tiny cheese cubes", "toy": "a tin of spare screws and springs"}, {"kind": "Rat", "name": "Rook", "tag": "The planner.", "hook": "Rook plays hide-and-seek like chess: three moves ahead, always with an escape route.", "origin": "Before the store adopted him, Rook lived in the Warehouse racks, dodging forklift bots and learning every shortcut, loading bay and blind corner. One night a forklift clipped his tail, and the Robo-Vet replaced the end with a robot tail-hook. Rook says it was a planned accident to get the upgrade. Nobody believes him.", "play": "His tail-hook latches onto shelves for a quick climb, so he's often right above the Catcher's head. Rook acts cool and calm, but he secretly keeps score of every round since the store opened, in a tiny notebook under his bed. He has never told anyone that he's in second place, behind Pixel.", "parts": "cyan eye, robot tail-hook, collar, chest core", "spot": "the high racks in the Warehouse", "mode": "Capture the Kibble", "quote": "Always have a way out.", "treat": "peanut-butter crackers", "toy": "a pocket chess set he plays against himself"}, {"kind": "Guinea Pig", "name": "Biscuit", "tag": "The worrier.", "hook": "Sweet, cuddly and frightened of almost everything, Biscuit is braver than she thinks.", "origin": "Biscuit came to the store in a cardboard box with a Handle With Care sticker, and she's been living up to it ever since. On her first night the sweeper bot rolled past and she ran straight into a shelf, bending her back leg. The Robo-Vet gave her a chrome leg and a night-light in her collar, so she's never fully in the dark. She still checks it's switched on before every round.", "play": "When she's nervous she wheeks, which has given away more hiding spots than any Snitch Bell. But Biscuit never gives up on a friend: she once stood on the rescue pad for a whole round, trembling, until everyone was free. Cody calls her the bravest pet in the store, and she wheeks every time he says it.", "parts": "cyan eye, chrome back leg, glowing collar, chest core", "spot": "under the pet beds in the Robo-Vet waiting room", "mode": "Freeze Tag, because thawing friends feels like hugging them", "quote": "Wheek! Sorry. Wheek!", "treat": "cool cucumber slices", "toy": "a soft knitted carrot she cuddles at night"}, {"kind": "Chinchilla", "name": "Velvet", "tag": "The show-off.", "hook": "The softest pet in the store, and she knows it.", "origin": "Velvet arrived as the star of the shop window, posing under a spotlight for customers all day. One evening she leaned too far for a better angle and toppled off her velvet cushion. The Robo-Vet fitted her a robot front leg, and she refused to leave until it had glitter lights. Her dust baths now leave sparkly clouds behind her, and Tinker turned that trick into the Bubble Bomb.", "play": "Velvet treats every round like a photo shoot and will pick a worse hiding spot if the lighting is better. Under the attitude she's fiercely loyal and has never once tattled on a friend. She also lets Biscuit sleep on her cushion when it storms, and would be very cross if anyone found out.", "parts": "cyan eye, robot front leg with glitter lights, collar, chest core", "spot": "the dryers in the grooming salon", "mode": "Alpha Pet, especially when she's wearing the crown", "quote": "Try to keep up, darling.", "treat": "rose-hip crisps", "toy": "a sparkly dust-bath ball"}, {"kind": "Ferret", "name": "Zip", "tag": "The prankster.", "hook": "Long, fast and full of mischief, Zip borrows things: socks, keys and other pets' hiding spots.", "origin": "Zip escaped from three different carriers on the way to the store, and once from the Robo-Vet's waiting room through a gap nobody knew existed. The staff gave up trying to keep him still and asked the Robo-Vet for something to burn off his energy. It fitted him a turbo robot leg. Things got much worse.", "play": "Zip invented the Spot Steal and the Banana Chew Toy, and he laughs every time a Catcher skids across one. He's quick enough to escape most chases, but he can't stop himself coming back to watch the fall. Under all the pranks, he's always first to help tidy up before the doors open.", "parts": "cyan eye, turbo robot leg, collar, chest core", "spot": "wherever someone else was hiding a second ago", "mode": "Infection", "quote": "Finders keepers!", "treat": "chicken jerky strips", "toy": "a borrowed sock (a different one every week)"}, {"kind": "Hedgehog", "name": "Bramble", "tag": "The grump with a soft middle.", "hook": "Bramble pretends he only plays so everyone will stop pestering him.", "origin": "Bramble rolls into a ball whenever he's surprised, which is exactly how he arrived. A delivery van hit a bump, he curled up, and he rolled out of the back doors, across the car park and in through the store's entrance. He bumped his front paw on the way, so the Robo-Vet fitted him a robot one. It also gave his spines glow-tips by accident, and now they light up cyan whenever he's happy.", "play": "That's a real problem for a hider, so Bramble spends most rounds trying very hard not to smile. He mutters about the rules, the noise and the other pets. But he's always first to share his snacks, and as a Catcher he never, ever stops searching.", "parts": "cyan eye, robot front paw, collar, chest core, glow-tip spines", "spot": "the boxes in the stockroom", "mode": "The Mole, so he can suspect everyone", "quote": "Hmph. Fine. One more round.", "treat": "crunchy mealworm bites", "toy": "a crinkly paper bag he grumbles at"}, {"kind": "Lizard", "name": "Jade", "tag": "The chameleon.", "hook": "Calm, patient and the best pure hider in the store.", "origin": "Jade arrived as a tiny lizard who needed extra warmth, so she spent her first month under the heat lamps in the Robo-Vet clinic. She liked it so much she never really left. When she slipped off a lamp stand and hurt her back leg, the Robo-Vet built her a new one and added a cyber eye that swivels on its own. She can now watch two aisles at once.", "play": "Jade can stay perfectly still for a whole round, and Catchers have walked past her a dozen times without noticing. She rarely speaks, but when she does, everyone listens. Pixel is the only pet who has ever found her on the first try.", "parts": "swivelling cyan eye, robot back leg, collar, chest core", "spot": "the Robo-Vet treatment bays", "mode": "Classic", "quote": "Stillness wins.", "treat": "honey-glazed crickets", "toy": "a warm pebble from under the heat lamp"}, {"kind": "Frog", "name": "Lily", "tag": "The joker.", "hook": "Bouncy, chatty and sure she's a star, Lily treats every match like a party.", "origin": "Lily hatched in the Sky Garden pond and grew up giving concerts to the fish, who never left early because they couldn't. On the night of her biggest show she leapt off a lily pad, missed the stage and landed hard on both back legs. The Robo-Vet gave her a pair of springy robot legs, and she now has the longest jump in the store. She calls it her encore.", "play": "Lily is convinced she's a famous singer, which she isn't. Her croak is so loud the others use it as the start signal for every round. She gets caught a lot and has fun every single time.", "parts": "cyan goggle eye, springy robot legs, collar, chest core", "spot": "the ponds and planters in the Sky Garden", "mode": "Freeze Tag", "quote": "Ribbit and run!", "treat": "fizzy fly pops", "toy": "a toy microphone"}, {"kind": "Snake", "name": "Noodle", "tag": "The gentle giant.", "hook": "The longest pet in the store, and the kindest.", "origin": "Noodle arrived in a very long box and was so nervous she stayed coiled up inside it for a week. She only came out on hide-and-seek night because Cody kept asking, and he let her win her very first round. She has no legs, so the Robo-Vet gave her a chrome tail-tip that hums softly when she moves. That way she never sneaks up on anyone by mistake.", "play": "Noodle slithers through the squeeze gaps and loves giving the smaller pets rides across the room. She's easy to spot because she's so long, so she hides by coiling up inside tubes and cages. When she's the Catcher, she says sorry to every pet she catches.", "parts": "cyan eye, chrome tail-tip, glowing collar, chest core", "spot": "coiled inside the long tubes and cages", "mode": "Infection, where she gives the best hugs", "quote": "Sssqueeze through, friends!", "treat": "egg-shaped protein pops", "toy": "a long rainbow fabric tunnel"}, {"kind": "Turtle", "name": "Pebble", "tag": "The steady one.", "hook": "Pebble is slow, and proud of it.", "origin": "Pebble was the second pet through the doors on opening day, and the last to arrive at the welcome party. On that first night he tried to keep up with Cody's chase, tipped onto his back and spun there for an hour. The Robo-Vet fixed his leg and hid a little wheel in the foot for emergencies. He says he's never needed it, but everyone has seen him use it.", "play": "When Pebble tucks into his shell he becomes a perfect rock, and Catchers walk straight past him. He remembers every round ever played and settles every argument about the rules. Even Cody asks him what the rules are.", "parts": "cyan eye, robot leg with a hidden wheel, collar, chest core", "spot": "right out in the open, pretending to be a rock", "mode": "Classic, the old-fashioned way", "quote": "Slow and steady stays hidden.", "treat": "fresh strawberry slices", "toy": "a wind-up toy car he has never raced"}, {"kind": "Macaw", "name": "Mango", "tag": "The loudmouth.", "hook": "Red, blue, gold and impossible to ignore.", "origin": "Mango used to be the store's greeter, perched by the doors saying Welcome! to every customer. He picked up so many phrases that he started repeating the staff's secrets too, and got moved to the back. Trying to fly back to his old perch, he clipped the ceiling fan, and the Robo-Vet replaced one wing with a robot one. He can't fly far now, but he glides from the top shelves and loves a dramatic entrance.", "play": "Mango repeats everything he hears, which makes him the store's best messenger and worst secret-keeper. He's the reason the Tattle Tag exists. As a hider he lasts until he gets lonely, because deep down he just wants everyone to be his friend.", "parts": "cyan eye, robot wing, light-up collar, chest core", "spot": "the hanging plants", "mode": "Alpha Pet", "quote": "Squawk! Found you! Squawk!", "treat": "mango chunks, of course", "toy": "a bell on a string for when he's bored"}, {"kind": "Goldfish", "name": "Bubbles", "tag": "The dreamer.", "hook": "Bubbles forgets the rules every round and has the most fun of anyone anyway.", "origin": "Bubbles was won at a fairground and spent her first year in a bowl on a high shelf, watching the other pets play every night. She wanted to join in so badly that Tinker and the Robo-Vet built her bowl a set of little robot legs. Now she walks it around the store like a tiny tank, with her collar light glowing on the rim.", "play": "Her bowl fogs up when she's nervous, which is surprisingly good camouflage. She also swims in happy circles whenever someone says her name, which gives her away. Bubbles is everyone's favourite, and the Catchers always seem to find her last.", "parts": "cyan eye, robot-legged bowl, collar light on the rim, chest core", "spot": "next to the aquarium, where she blends right in", "mode": "whichever one the others are playing", "quote": "Wait, are we playing? Yay!", "treat": "rainbow flake sprinkles", "toy": "a little plastic castle for her bowl"}];
+const esc = t => t.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const serverStatus = document.getElementById("server-status");
+const serverStatusText = document.getElementById("server-status-text");
+let statusRequestPending = false;
+async function updateServerStatus() {
+  if (statusRequestPending) return;
+  statusRequestPending = true;
+  try {
+    const response = await fetch("/status", {cache:"no-store", signal:AbortSignal.timeout(5000)});
+    if (!response.ok) throw new Error(`Server status returned ${response.status}`);
+    const status = await response.json();
+    if (!Number.isSafeInteger(status.online) || status.online < 0) throw new Error("Invalid server status response");
+    serverStatus.dataset.state = "online";
+    serverStatusText.textContent = `Server online · ${status.online} ${status.online === 1 ? "player" : "players"}`;
+  } catch {
+    serverStatus.dataset.state = "offline";
+    serverStatusText.textContent = "Server unavailable";
+  } finally {
+    statusRequestPending = false;
+  }
+}
+updateServerStatus();
+window.setInterval(updateServerStatus, 15000);
+document.getElementById("petgrid").innerHTML = PET_INFO.map((p,i) => `<button type="button" class="pet" data-i="${i}" aria-pressed="false" aria-controls="story"><img src="img/${file(p.kind)}.png" alt="" loading="lazy"><b>${p.name}</b><small>${p.kind}</small></button>`).join("");
+function showPet(i, scroll){
+  const p = PET_INFO[i];
+  document.querySelectorAll("#petgrid .pet").forEach(b => b.setAttribute("aria-pressed", b.dataset.i == i));
+  document.getElementById("story").innerHTML = `<div class="pic"><img src="img/${file(p.kind)}.png" alt="${esc(p.name)} the ${p.kind.toLowerCase()}"></div>
+    <div><h3>${esc(p.name)}</h3><p class="kind">The ${p.kind.toLowerCase()}</p>
+    <p class="hook"><b>${esc(p.tag)}</b> ${esc(p.hook)}</p><p>${esc(p.origin)}</p><p>${esc(p.play)}</p></div>
+    <dl><div><dt>Cyber parts</dt><dd>${esc(p.parts)}</dd></div><div><dt>Favourite spot</dt><dd>${esc(p.spot)}</dd></div>
+    <div><dt>Favourite mode</dt><dd>${esc(p.mode)}</dd></div><div><dt>Favourite treat</dt><dd>${esc(p.treat)}</dd></div><div><dt>Favourite toy</dt><dd>${esc(p.toy)}</dd></div><div class="quote">"${esc(p.quote)}"</div></dl>`;
+  if (scroll) { const st = document.getElementById("story"); if (st.getBoundingClientRect().top > innerHeight - 120) st.scrollIntoView({behavior:"smooth", block:"nearest"}); }
+}
+document.getElementById("petgrid").addEventListener("click", e => { const b = e.target.closest(".pet"); if (b) showPet(+b.dataset.i, true); });
+showPet(0, false);
+const PARADE = ["Puppy","Kitten","Bunny","Frog","Hedgehog","Macaw","Hamster","Turtle","Goldfish"];
+document.getElementById("parade").innerHTML = PARADE.map(n => `<img src="img/${file(n)}.png" alt="${n}">`).join("");
+
+const MODES = [
+  ["Classic","#ff3fb4","Hide until the timer runs out. Caught pets go to the Sin Bin, where break-outs, the rescue pad and Turncoats keep everyone in the game.","Settings: break-out tries, rescue pad shield, Turncoat offer"],
+  ["Tag","#ffd23f","Tagged? You're it. Whoever is it when the clock hits zero loses.","Settings: tag-back wait, hide time"],
+  ["Infection","#6cff5a","Tagged hiders join the hunt. Survive the growing swarm.","Settings: infected speed, first Catchers"],
+  ["Kibble Heist","#ff8c1a","Haul Golden Kibble sacks to the loading dock while the Catchers guard them.","Settings: sacks to win, carry speed"],
+  ["Alpha Pet","#ffe14d","Protect the crowned pet. The crown soaks up tags before it falls.","Settings: crown hits, glint timer"],
+  ["Blackout","#33ffe0","Lights out. The Catcher has a flashlight and you have the dark.","Settings: how dark, torch range"],
+  ["Freeze Tag","#7fd4ff","Tagged pets freeze. Stand next to a friend to thaw them.","Settings: thaw time, melt after 30 s"],
+  ["The Mole","#b98cff","One hider secretly works for the Catchers. Who is it?","Settings: when the Mole is forced out, 1 or 2 Moles"],
+  ["Capture the Kibble","#ff5a5a","Red vs Blue. Steal the other team's crate and bring it home. First to 3 wins.","Settings: team, captures to win, Turncoat Duels"],
+  ["Free Roam","#4dd2ff","No Catchers on the hunt. Explore, grab bolt tokens and play the machines. Hangout lasts as long as you like; Treasure gives you 5 minutes to open loot boxes.","Settings: Hangout or Treasure, sweeper bot, code note"],
+];
+document.getElementById("modegrid").innerHTML = MODES.map(([n,c,d,o]) => `<div class="mode" style="--c:${c}"><h3>${n}</h3><p>${d}</p><p class="opt">${o}</p></div>`).join("");
+
+const MAPS = [
+  ["Mega Store","megastore_classic","The big shop: seven rooms, a stockroom deck, a checkout shutter and a sweeper bot that patrols the aisles. The i-Pet fountain sits in the middle."],
+  ["Robo-Vet","vet_freeze","A robot vet clinic with treatment bays, kennels and a waiting room full of carriers and beds."],
+  ["Warehouse","warehouse_ctf","Tall racks, loading bays and long sight lines. Great for Capture the Kibble."],
+  ["Sky Garden","garden_heist","A rooftop garden of planters, ponds and greenhouse cover, with a picnic terrace."],
+  ["Dog Park","","An outdoor play yard with agility tunnels, hay bales, bushes, kennels and picnic tables.","#6cff5a"],
+  ["Funhouse","","A carnival maze of mirror pods, clown boxes, a ghost train, ball heaps and arcade prizes.","#ff3fb4"],
+  ["Boot Camp","","A training ground packed with bunk beds, crawl tubes, sandbags, kit racks and drill bots.","#ff8c1a"],
+];
+document.getElementById("mapgrid").innerHTML = MAPS.map(([n,f,d,c]) => `<div class="map">${f ? `<img src="img/${f}.jpg" alt="${n} map in play" loading="lazy">` : `<div class="map-art" style="--map-accent:${c}" aria-hidden="true"><span>NOW OPEN</span></div>`}<div><h3>${n}</h3><p>${d}</p></div></div>`).join("");
+
+const FAMS = [
+  ["Trips","#ff3fb4","Slow, fool and distract the Catchers.",[["Decoy Squeaker","Throw a squeaky toy to lure the Catcher"],["Slime Puddle","A puddle that slows anyone in it"],["Tripwire Bell","Rings when a Catcher crosses it"],["Banana Chew Toy","Catchers skid straight across it"],["Fake Paw Prints","Stamp a false trail leading away"],["Shelf Rattle","Rattle a nearby shelf to call the Catcher"],["Light Switch","Lights out for 5 s: Catchers can't see far"],["Bubble Bomb","A bubble cloud hides everyone in it"]]],
+  ["Advantages","#33ffe0","Help yourself stay free.",[["Turbo Treat","Speed burst and full stamina"],["Holo Cloak","The Catcher can't see you for 4 s"],["Mega Sneeze","Your next sneeze stuns Catchers nearby"],["Rocket Paws","A rocket dash the way you're facing"],["Night Goggles","See Catchers through walls for 10 s"],["Spare Key","Caught? You walk right back out"],["Fresh Scent","No footprints for 10 s"],["Kibble Lure","A bowl the first Catcher stops to eat"]]],
+  ["Sabotage","#ff8c1a","Every pet for itself.",[["Snitch Bell","The nearest other hider jingles for 4 s"],["Squeaky Collar","The nearest other hider squeaks when moving"],["Spot Steal","Shove a hidden friend out and take their spot"],["Tattle Tag","Tell the Catchers where a friend is"],["Glue Puddle","A sticky puddle that nearly stops anyone"]]],
+];
+document.getElementById("famgrid").innerHTML = FAMS.map(([n,c,d,list]) => `<div class="fam" style="--c:${c}"><h3>${n}</h3><p>${d}</p><ul>${list.map(([a,b]) => `<li><i></i><b>${a}</b><span>${b}</span></li>`).join("")}</ul></div>`).join("");
+
+const SPECIALS = [["tennis", "Squeaky Tennis Ball", "hider", "common", "Throw it: it squeaks where it lands", "Catchers see the ball up close", "From Cody's toy box"], ["laser", "Laser Pointer", "catcher", "legendary", "Stuns the nearest hider in sight for 1.5 s", "Needs a clear view; the dot shows first", "From Pixel's toy box"], ["spring", "Spring Ball", "hider", "common", "2 s burst of speed", "Leaves footprints for 6 s", "From Hopscotch's toy box"], ["wheel", "Running Wheel", "hider", "common", "Refills your stamina at once", "Small: no counter needed", "From Nugget's toy box"], ["screws", "Tin of Screws", "hider", "rare", "Your next break-out game gets more time", "Only helps once you're caught", "From Tinker's toy box"], ["chess", "Pocket Chess Set", "hider", "rare", "See every Catcher through walls for 5 s", "Catchers hear a chime", "From Rook's toy box"], ["carrot", "Knitted Carrot", "hider", "common", "Rescue pad shield lasts 10 s longer", "Catchers see the shield ring", "From Biscuit's toy box"], ["dust", "Dust-bath Ball", "hider", "rare", "A sparkly cloud Catchers can't see into", "The cloud itself is easy to spot", "From Velvet's toy box"], ["sock", "Borrowed Sock", "catcher", "common", "Drop a sock trap that slows hiders", "Visible up close", "From Zip's toy box"], ["bag", "Paper Bag", "hider", "rare", "Hide anywhere for 8 s, even in the open", "Moving rustles and ends it", "From Bramble's toy box"], ["pebble", "Warm Pebble", "hider", "common", "For 10 s you fade from view while still", "Moving shows you again", "From Jade's toy box"], ["mic", "Toy Microphone", "catcher", "rare", "Reveals every walking hider within 300 px", "Hiders hear the mic squeal", "From Lily's toy box"], ["tunnel", "Rainbow Tunnel", "hider", "rare", "Lay a tunnel that boosts hiders for 20 s", "Catchers can stand on it", "From Noodle's toy box"], ["car", "Wind-up Car", "catcher", "common", "A car that honks at the first walking hider", "Hidden hiders don't count", "From Pebble's toy box"], ["bell", "Bell on a String", "catcher", "common", "Walking hiders within 250 px squeak", "Hidden hiders don't", "From Mango's toy box"], ["castle", "Plastic Castle", "hider", "legendary", "Keep it: the next catch smashes it instead", "It shatters loudly", "From Bubbles's toy box"], ["holo", "Holo Decoy", "hider", "rare", "A hologram and fake trail run off ahead", "It vanishes when a Catcher touches it", "Store item"], ["fog", "Neon Fog Bomb", "hider", "common", "A fog cloud that slows Catchers inside", "The fog glows", "Store item"], ["collar", "Stealth Collar", "hider", "common", "No footprints or noise for 10 s", "You still show in a Catcher's view", "Store item"], ["blink", "Blink Tag", "hider", "rare", "Zap back to the last spot you hid in", "A flash and a zap at both ends", "Store item"], ["soldout", "\"Sold Out\" Sign", "hider", "common", "Searching a spot takes twice as long for 20 s", "The sign hints someone may be inside", "Store item"], ["sinkey", "Sin Bin Key", "hider", "legendary", "Frees everyone in the Sin Bin from anywhere", "Freed pets leave footprints", "Store item"], ["flare", "Spotlight Flare", "catcher", "common", "Reveals walking hiders within 350 px for 4 s", "Hidden hiders stay hidden", "Store item"], ["trolley", "Turbo Trolley", "catcher", "common", "Charge straight ahead at speed for 2 s", "You can't turn", "Store item"], ["drone", "Sniffer Drone", "catcher", "rare", "Searches the hiding spot ahead from afar", "Hiders inside get a warning buzz", "Store item"], ["magnet", "Bolt Magnet", "both", "common", "Pulls in bolt tokens within 300 px", "A loud clank", "Store item"], ["can", "Energy Can", "both", "common", "Full stamina and 4 s of speed, then a slump", "2 s of tiredness afterwards", "Store item"], ["shield", "Shield Bubble", "both", "rare", "Blocks the next item used on you", "It pops loudly", "Store item"]];
+const RARE = {common:"#9fe8ff",rare:"#c77dff",legendary:"#ffd23f"};
+const SIDE = {hider:"Hiders",catcher:"Catchers",both:"Everyone"};
+document.getElementById("spgrid").innerHTML = SPECIALS.map(([id,n,side,r,b,c,f]) => `<div class="spi"><img src="img/sp/${id}.png" alt="" loading="lazy"><b>${esc(n)}</b><span class="t" style="color:${RARE[r]}">${r} <i>· for ${SIDE[side]}</i></span><p>${esc(b)}.</p><p class="c">Counter: ${esc(c)}. ${esc(f)}.</p></div>`).join("");
+
+const WARD = {"Hats": [["Party Hat", 20, ""], ["Antenna", 25, ""], ["Big Bow", 30, ""], ["Chef Hat", 35, ""], ["Baseball Cap", 40, "cap"], ["Top Hat", 45, ""], ["Headphones", 50, ""], ["Cowboy Hat", 55, "cowboy"], ["Propeller", 60, ""], ["Pirate Hat", 65, "pirate"], ["Wizard Hat", 70, "wizard"], ["Viking Helmet", 75, "viking"], ["Neon Halo", 80, ""], ["Royal Crown", 100, "crown"]], "Glasses": [["Round Specs", 30, "specs"], ["Heart Glasses", 35, "hearts"], ["Star Shades", 40, "stars"], ["Neon Visor", 45, "visor"]], "Collars": [["Bow Tie", 25, "bowtie"], ["Bandana", 30, "bandana"], ["Neon Spike Collar", 45, "spikes"], ["Gold Chain", 60, "chain"]], "Back": [["Backpack", 60, "backpack"], ["Super Cape", 80, "cape"], ["Robo Wings", 110, "wings"], ["Jetpack", 120, "jetpack"]]};
+document.getElementById("wardlist").innerHTML = Object.entries(WARD).map(([slot, list]) =>
+  `<h3 class="wslot">${slot}</h3><ul class="price">` + list.map(([n,p,img]) =>
+    `<li>${img ? `<img src="img/ward/${img}.png" alt="" loading="lazy">` : ""}<span>${n}</span><b>${p} bolts</b></li>`).join("") + `</ul>`).join("");
+
+const RANKS = [["Bargain Bin",0,"#9a8fb8"],["Clearance Rack",100,"#ff8c1a"],["Shelf Pet",300,"#33ffe0"],["Display Window",700,"#ff3fb4"],["Premium Pod",1500,"#9b5cff"],["Golden Collar",3000,"#ffd23f"]];
+document.getElementById("ranks").innerHTML = RANKS.map(([n,at,c],i) => `<div class="rank" style="--c:${c}"><div class="bar" style="height:${28 + i * 22}px"></div><b>${n}</b><small>${at.toLocaleString("en")} PP</small></div>`).join("");
+
+const PP = [["Playing a match",5],["Surviving as a hider",25],["Each rescue",15],["Each break-out",10],["Close calls (up to 5)","3 each"],["Time hidden","1 per 10 s"],["Each catch as a Catcher",10],["Your side wins",20],["MVP",15]];
+document.getElementById("pptable").innerHTML = PP.map(([a,b]) => `<tr><td>${a}</td><td>+${b}</td></tr>`).join("");
+
+const accountDialog = document.getElementById("account-dialog");
+const accountTrigger = document.getElementById("account-trigger");
+const accountTriggerLabel = document.getElementById("account-trigger-label");
+const registerTriggers = [...document.querySelectorAll('.register-trigger[aria-controls="account-dialog"]')];
+const menuToggle = document.getElementById("menu-toggle");
+const siteMenu = document.getElementById("site-menu");
+const signedOutView = document.getElementById("account-signed-out");
+const signedInView = document.getElementById("account-signed-in");
+const resetRequested = new URLSearchParams(location.search).get("account") === "reset";
+let accountData = null;
+function setSiteMenuOpen(open) {
+  siteMenu.hidden = !open;
+  menuToggle.setAttribute("aria-expanded", String(open));
+  menuToggle.setAttribute("aria-label", open ? "Close site sections" : "Open site sections");
+}
+menuToggle.addEventListener("click", () => setSiteMenuOpen(siteMenu.hidden));
+siteMenu.querySelectorAll("a").forEach(link => link.addEventListener("click", () => setSiteMenuOpen(false)));
+document.addEventListener("click", event => {
+  if (!siteMenu.hidden && !siteMenu.contains(event.target) && !menuToggle.contains(event.target)) setSiteMenuOpen(false);
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !siteMenu.hidden) {
+    setSiteMenuOpen(false);
+    menuToggle.focus();
+  }
+});
+const BADGE_NAMES = {
+  first:"First Night",regular:"Night Shift Regular",rescuer:"Rescue Ranger",escape:"Escape Artist",
+  catcher:"Top Catcher",ghost:"Ghost of the Aisles",close:"Close Shave",tourist:"Store Tourist",
+  modes:"Mode Master",collector:"Collector",fashion:"Fashion Pet",champion:"Hard Champion",
+};
+const WARDROBE_NAMES = {
+  party:"Party Hat",antenna:"Antenna",bow:"Big Bow",chef:"Chef Hat",tophat:"Top Hat",
+  headphones:"Headphones",propeller:"Propeller",halo:"Neon Halo",cap:"Baseball Cap",cowboy:"Cowboy Hat",
+  pirate:"Pirate Hat",wizard:"Wizard Hat",viking:"Viking Helmet",crown:"Royal Crown",specs:"Round Specs",
+  hearts:"Heart Glasses",stars:"Star Shades",visor:"Neon Visor",bowtie:"Bow Tie",bandana:"Bandana",
+  spikes:"Neon Spike Collar",chain:"Gold Chain",backpack:"Backpack",cape:"Super Cape",wings:"Robo Wings",jetpack:"Jetpack",
+};
+const SPECIAL_NAMES = Object.fromEntries(SPECIALS.map(([id,name]) => [id,name]));
+function setAccountMessage(id, message, isError = false) {
+  const element = document.getElementById(id);
+  element.textContent = message;
+  element.dataset.error = isError ? "true" : "false";
+}
+function showAccountMode(mode) {
+  document.getElementById("account-login-view").hidden = mode !== "login";
+  document.getElementById("account-register-view").hidden = mode !== "register";
+  document.getElementById("account-reset-request-view").hidden = mode !== "request";
+  document.getElementById("account-reset-confirm-view").hidden = mode !== "confirm";
+  document.getElementById("account-promo").hidden = mode === "register";
+  signedOutView.classList.toggle("register-mode", mode === "register");
+  signedOutView.hidden = false;
+  signedInView.hidden = true;
+}
+function renderChips(id, values, emptyText) {
+  const target = document.getElementById(id);
+  target.replaceChildren();
+  const list = values.slice(0, 40);
+  if (!list.length) {
+    const empty = document.createElement("span");
+    empty.className = "account-empty";
+    empty.textContent = emptyText;
+    target.append(empty);
+    return;
+  }
+  for (const value of list) {
+    const chip = document.createElement("span");
+    chip.className = "account-chip";
+    chip.textContent = value;
+    target.append(chip);
+  }
+}
+function displayLabel(value, labels) {
+  const id = String(value);
+  return labels[id] || id.replace(/[_-]+/g," ").replace(/\b[a-z]/g,letter => letter.toUpperCase());
+}
+function setAccountSignedIn(data) {
+  accountData = data;
+  signedOutView.hidden = true;
+  signedInView.hidden = false;
+  registerTriggers.forEach(trigger => trigger.hidden = true);
+  accountTriggerLabel.textContent = "My profile";
+  const profile = data.profile && typeof data.profile === "object" ? data.profile : {};
+  const player = data.player && typeof data.player === "object" ? data.player : {};
+  const online = data.online && typeof data.online === "object" ? data.online : {};
+  const lifetime = profile.lifetime && typeof profile.lifetime === "object" ? profile.lifetime : {};
+  const number = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString("en") : "0";
+  document.getElementById("account-player-tag").textContent = player.tag || "Player profile";
+  document.getElementById("account-email").textContent = data.email || "";
+  document.getElementById("account-pet-label").textContent = PETS[Number.isInteger(player.species) ? player.species : 0] || "Pet";
+  document.querySelector('[data-account-value="bolts"]').textContent = number(profile.bolts);
+  document.querySelector('[data-account-value="matches"]').textContent = number(lifetime.matches);
+  document.querySelector('[data-account-value="wins"]').textContent = number(lifetime.wins);
+  document.querySelector('[data-account-value="points"]').textContent = number(online.total);
+  const rank = online.rank_name ? `${online.rank_name} · ${number(online.season_pp)} season PP` : "Rank not available";
+  document.getElementById("account-season-label").textContent = rank;
+  const badges = profile.badges && typeof profile.badges === "object" ? Object.keys(profile.badges) : [];
+  renderChips("account-badges", badges.map(id => displayLabel(id, BADGE_NAMES)), "No badges earned yet");
+  const wardrobe = Array.isArray(profile.wardrobe_owned) ? profile.wardrobe_owned : [];
+  renderChips("account-wardrobe", wardrobe.map(id => displayLabel(id, WARDROBE_NAMES)), "No wardrobe items yet");
+  const specials = profile.specials && typeof profile.specials === "object" ? profile.specials : {};
+  const specialItems = Object.entries(specials)
+    .filter(([,count]) => Number(count) > 0)
+    .map(([id,count]) => `${displayLabel(id, SPECIAL_NAMES)} ×${number(count)}`);
+  renderChips("account-specials", specialItems, "No special items in your inventory");
+  const outfit = profile.outfit && typeof profile.outfit === "object" ? profile.outfit : {};
+  const worn = Object.entries(outfit)
+    .filter(([,id]) => typeof id === "string" && id)
+    .map(([slot,id]) => `${displayLabel(slot,{hat:"Hat",glasses:"Glasses",collar:"Collar",back:"Back"})}: ${displayLabel(id, WARDROBE_NAMES)}`);
+  renderChips("account-outfit", worn, "Nothing equipped");
+  setAccountMessage("account-profile-message", "");
+}
+async function accountRequest(path, body) {
+  const response = await fetch(path, {
+    method: body ? "POST" : "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: body ? {"content-type":"application/json"} : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await response.text();
+  let result;
+  try { result = text ? JSON.parse(text) : {}; } catch {
+    throw new Error("The server returned an invalid response.");
+  }
+  if (!response.ok) throw new Error(result.error || `Request failed (${response.status}).`);
+  return result;
+}
+function showAccountDialog(mode = "login") {
+  if (accountData) signedInView.hidden = false;
+  else showAccountMode(mode);
+  if (!accountDialog.open) accountDialog.showModal();
+}
+function showRegisterDialog() {
+  if (!accountData) setAccountMessage("account-register-message", "");
+  showAccountDialog("register");
+  if (!accountData) document.getElementById("account-register-email").focus();
+}
+accountTrigger.addEventListener("click", () => showAccountDialog());
+registerTriggers.forEach(trigger => trigger.addEventListener("click", showRegisterDialog));
+document.getElementById("account-close").addEventListener("click", () => accountDialog.close());
+document.getElementById("account-create").addEventListener("click", showRegisterDialog);
+document.getElementById("account-register-back").addEventListener("click", () => showAccountMode("login"));
+document.getElementById("account-forgot").addEventListener("click", () => {
+  document.getElementById("account-reset-email").value = document.getElementById("account-login-email").value;
+  setAccountMessage("account-reset-request-message", "");
+  showAccountMode("request");
+});
+document.getElementById("account-reset-back").addEventListener("click", () => showAccountMode("login"));
+document.getElementById("account-reset-back-confirm").addEventListener("click", () => showAccountMode("login"));
+
+const accountRegisterForm = document.getElementById("account-register-form");
+const accountRegisterInputs = [...accountRegisterForm.querySelectorAll("[data-validate]")];
+const accountRegisterAge = document.getElementById("account-register-age");
+const accountRegisterDob = document.getElementById("account-register-dob");
+const accountRegisterPassword = document.getElementById("account-register-password");
+const accountRegisterConfirm = document.getElementById("account-register-confirm");
+
+function registrationAgeFromDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return -1;
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (year < 1900) return -1;
+  const birth = new Date(Date.UTC(year, month - 1, day));
+  if (birth.getUTCFullYear() !== year || birth.getUTCMonth() !== month - 1 || birth.getUTCDate() !== day) return -1;
+  const today = new Date();
+  let age = today.getUTCFullYear() - year;
+  if (today.getUTCMonth() + 1 < month || (today.getUTCMonth() + 1 === month && today.getUTCDate() < day)) age--;
+  return age >= 0 && age <= 120 ? age : -1;
+}
+
+function registrationFieldIssue(input) {
+  const value = input.value.trim();
+  switch (input.name) {
+    case "email":
+      if (!value || value.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Enter a valid email address.";
+      break;
+    case "username":
+      if (!/^[A-Za-z0-9][A-Za-z0-9_-]{2,23}$/.test(value)) return "Use 3–24 letters, numbers, underscores, or hyphens.";
+      break;
+    case "first_name":
+    case "surname": {
+      const name = value.normalize("NFC").replace(/\s+/gu, " ");
+      if (!name || [...name].length > 80 || !/\p{L}/u.test(name)
+        || /[^\p{L}\p{M} .'\u2019\u02BC\u2010-\u2015-]/u.test(name)) return "Enter a name using letters and common name punctuation.";
+      break;
+    }
+    case "country": {
+      const country = value.normalize("NFC").replace(/\s+/gu, " ");
+      if ([...country].length < 2 || [...country].length > 80 || !/\p{L}/u.test(country)
+        || /[\p{Cc}\p{Cf}]/u.test(country)) return "Enter a country name (2–80 characters).";
+      break;
+    }
+    case "age": {
+      if (value === "" || !Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 120) {
+        return "Enter an age from 0 to 120.";
+      }
+      const dateAge = registrationAgeFromDate(accountRegisterDob.value);
+      if (dateAge >= 0 && Number(value) !== dateAge) return "Age must match date of birth.";
+      break;
+    }
+    case "date_of_birth": {
+      const dateAge = registrationAgeFromDate(value);
+      if (dateAge < 0) return "Enter a real date of birth from 1900 to today.";
+      if (accountRegisterAge.value !== "" && Number.isInteger(Number(accountRegisterAge.value))
+        && Number(accountRegisterAge.value) !== dateAge) return "Age must match date of birth.";
+      break;
+    }
+    case "password":
+      if (input.value.length < 10 || input.value.length > 128) return "Password must be 10–128 characters.";
+      break;
+    case "confirm_password":
+      if (!input.value) return "Re-enter your password to confirm it.";
+      if (input.value !== accountRegisterPassword.value) return "Passwords must match.";
+      break;
+  }
+  return "";
+}
+
+function validateRegistrationField(input) {
+  const issue = registrationFieldIssue(input);
+  const error = document.getElementById(`${input.id}-error`);
+  error.textContent = issue;
+  input.setAttribute("aria-invalid", issue ? "true" : "false");
+  return !issue;
+}
+
+for (const input of accountRegisterInputs) {
+  input.addEventListener("blur", () => {
+    input.dataset.touched = "true";
+    validateRegistrationField(input);
+    if (input === accountRegisterAge && accountRegisterDob.dataset.touched) validateRegistrationField(accountRegisterDob);
+    if (input === accountRegisterDob && accountRegisterAge.dataset.touched) validateRegistrationField(accountRegisterAge);
+    if (input === accountRegisterPassword && accountRegisterConfirm.dataset.touched) validateRegistrationField(accountRegisterConfirm);
+  });
+}
+
+accountRegisterForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  let firstInvalid = null;
+  for (const input of accountRegisterInputs) {
+    input.dataset.touched = "true";
+    if (!validateRegistrationField(input) && !firstInvalid) firstInvalid = input;
+  }
+  if (firstInvalid) {
+    firstInvalid.focus();
+    firstInvalid.scrollIntoView({block:"center",behavior:"smooth"});
+    setAccountMessage("account-register-message", "Correct the highlighted fields before creating your account.", true);
+    return;
+  }
+
+  const submit = document.getElementById("account-register-submit");
+  submit.disabled = true;
+  submit.textContent = "Creating account...";
+  setAccountMessage("account-register-message", "");
+  let created = false;
+  try {
+    await accountRequest("/api/register", {
+      email: document.getElementById("account-register-email").value.trim(),
+      username: document.getElementById("account-register-username").value.trim(),
+      first_name: document.getElementById("account-register-first-name").value.trim(),
+      surname: document.getElementById("account-register-surname").value.trim(),
+      country: document.getElementById("account-register-country").value.trim(),
+      age: Number(accountRegisterAge.value),
+      date_of_birth: accountRegisterDob.value,
+      password: accountRegisterPassword.value,
+      remember: document.getElementById("account-register-remember").checked,
+    });
+    created = true;
+    const data = await accountRequest("/api/me");
+    setAccountSignedIn(data);
+    setAccountMessage("account-profile-message", "Account created. Sign in with the updated game to link your saved local progress.");
+    accountRegisterForm.reset();
+  } catch (error) {
+    if (created) {
+      showAccountMode("login");
+      setAccountMessage("account-login-message", "Your account was created, but its profile could not be loaded. Sign in to continue.", true);
+    } else {
+      setAccountMessage("account-register-message", error.message || "Could not create your account. Please try again.", true);
+    }
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Create account";
+  }
+});
+
+document.getElementById("account-login-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const submit = document.getElementById("account-login-submit");
+  submit.disabled = true;
+  submit.textContent = "Signing in...";
+  setAccountMessage("account-login-message", "");
+  try {
+    await accountRequest("/api/login", {
+      email: document.getElementById("account-login-email").value,
+      password: document.getElementById("account-login-password").value,
+      remember: document.getElementById("account-remember").checked,
+    });
+    const data = await accountRequest("/api/me");
+    setAccountSignedIn(data);
+    document.getElementById("account-login-form").reset();
+  } catch (error) {
+    setAccountMessage("account-login-message", error.message || "Could not sign in. Check your connection and try again.", true);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Sign in";
+  }
+});
+document.getElementById("account-reset-request-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const submit = document.getElementById("account-reset-request-submit");
+  submit.disabled = true;
+  submit.textContent = "Sending...";
+  setAccountMessage("account-reset-request-message", "");
+  const email = document.getElementById("account-reset-email").value;
+  try {
+    const result = await accountRequest("/api/password-reset/request", {email});
+    document.getElementById("account-confirm-email").value = email;
+    setAccountMessage("account-reset-confirm-message", result.message);
+    showAccountMode("confirm");
+  } catch (error) {
+    setAccountMessage("account-reset-request-message", error.message || "Could not request a reset code.", true);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Email me a code";
+  }
+});
+document.getElementById("account-reset-confirm-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const submit = document.getElementById("account-reset-confirm-submit");
+  submit.disabled = true;
+  submit.textContent = "Saving...";
+  setAccountMessage("account-reset-confirm-message", "");
+  try {
+    const result = await accountRequest("/api/password-reset/confirm", {
+      email: document.getElementById("account-confirm-email").value,
+      code: document.getElementById("account-reset-code").value,
+      password: document.getElementById("account-new-password").value,
+    });
+    const email = document.getElementById("account-confirm-email").value;
+    document.getElementById("account-login-email").value = email;
+    document.getElementById("account-reset-confirm-form").reset();
+    showAccountMode("login");
+    setAccountMessage("account-login-message", result.message);
+  } catch (error) {
+    setAccountMessage("account-reset-confirm-message", error.message || "Could not reset the password.", true);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Save new password";
+  }
+});
+document.getElementById("account-logout").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  setAccountMessage("account-profile-message", "");
+  try {
+    await accountRequest("/api/logout", {});
+    accountData = null;
+    registerTriggers.forEach(trigger => trigger.hidden = false);
+    accountTriggerLabel.textContent = "Sign in";
+    document.getElementById("account-login-form").reset();
+    showAccountMode("login");
+    setAccountMessage("account-login-message", "You have signed out.");
+  } catch (error) {
+    setAccountMessage("account-profile-message", error.message || "Could not sign out.", true);
+  } finally {
+    button.disabled = false;
+  }
+});
+if (resetRequested) {
+  showAccountMode("request");
+  setAccountMessage("account-reset-request-message", "");
+  accountDialog.showModal();
+  const cleanUrl = new URL(location.href);
+  cleanUrl.searchParams.delete("account");
+  history.replaceState(null, "", cleanUrl);
+}
+accountRequest("/api/me").then(data => {
+  if (data.authenticated) {
+    if (resetRequested) {
+      accountData = data;
+      registerTriggers.forEach(trigger => trigger.hidden = true);
+      accountTriggerLabel.textContent = "My profile";
+    } else {
+      setAccountSignedIn(data);
+    }
+  }
+}).catch(() => {
+  accountData = null;
+  registerTriggers.forEach(trigger => trigger.hidden = false);
+  accountTriggerLabel.textContent = "Sign in";
+});
+}
+</script>
+</body>
+</html>

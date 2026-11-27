@@ -1,0 +1,20 @@
+{
+  "name": "peti-2296-lobby",
+  "version": "1.1.0",
+  "description": "Lobby, chat, relay, Paw Points, Packs and linked player accounts for i-Pet Cyber Store 2096",
+  "main": "lobby_server.js",
+  "private": true,
+  "scripts": {
+    "build": "echo build",
+    "test": "node --test",
+    "start": "node lobby_server.js",
+    "dev": "node lobby_server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "mysql2": "^3.11.0",
+    "ws": "^8.23.0"
+  }
+}

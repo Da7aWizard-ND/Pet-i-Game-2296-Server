@@ -1,0 +1,11 @@
+{
+  "channel": "beta",
+  "version": "1.12.0",
+  "min_version": "1.12.0",
+  "url": "/releases/iPetSetup-1.12.0.exe",
+  "sha256": "e9e4ceac8d674a99a39f95c71fcd8a7ae3b8112ca381409081416160aca6210d",
+  "size": 37242556,
+  "notes": "1.12.0 beta: species-specific pet outfits and updated virtual pet care",
+  "mandatory": false,
+  "published": "2026-11-27T09:46:45.012Z"
+}
