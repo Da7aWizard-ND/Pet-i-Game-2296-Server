@@ -41,6 +41,7 @@ const SITE_DIR = fs.existsSync(path.join(__dirname, "site"))
   : fs.existsSync(path.join(__dirname, "website"))
     ? path.join(__dirname, "website")
     : path.resolve(__dirname, "..", "website");
+// The auto-updater: /update.json and the installers in server/releases.
 const updates = createUpdates();
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -85,6 +86,18 @@ function log(...a) {
   console.log(new Date().toISOString(), ...a);
 }
 
+const TRUSTED_PROXY_ADDRESSES = new Set(
+  String(process.env.TRUSTED_PROXIES || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+
+function trustedProxy(address) {
+  const value = String(address || "").replace(/^::ffff:/, "");
+  return TRUSTED_PROXY_ADDRESSES.has(value);
+}
+
 function jsonResponse(res, status, value, headers = {}) {
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -96,6 +109,8 @@ function jsonResponse(res, status, value, headers = {}) {
 }
 
 function requestIsHttps(req) {
+  const remoteAddress = req.socket.remoteAddress || "";
+  if (!trustedProxy(remoteAddress)) return !!req.socket.encrypted;
   const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
   return !!req.socket.encrypted || forwardedProto === "https";
 }
@@ -108,6 +123,7 @@ function requestIsSecure(req) {
 }
 
 function requestIp(req) {
+  if (!trustedProxy(req.socket.remoteAddress || "")) return req.socket.remoteAddress || "";
   return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
 }
 
@@ -168,8 +184,8 @@ function readJsonBody(req) {
   });
 }
 
-function accountApiError(res, status, message, code = "") {
-  jsonResponse(res, status, { error: message, ...(code ? { code } : {}) });
+function accountApiError(res, status, message) {
+  jsonResponse(res, status, { error: message });
 }
 
 async function handleAccountApi(req, res, pathname) {
@@ -200,7 +216,7 @@ async function handleAccountApi(req, res, pathname) {
     });
   }
 
-  if (!["/api/register", "/api/register/verify", "/api/register/resend", "/api/login", "/api/logout", "/api/password-reset/request", "/api/password-reset/confirm"].includes(pathname)) {
+  if (!["/api/register", "/api/login", "/api/logout", "/api/password-reset/request", "/api/password-reset/confirm"].includes(pathname)) {
     return accountApiError(res, 404, "Not found.");
   }
   if (req.method !== "POST") {
@@ -228,59 +244,9 @@ async function handleAccountApi(req, res, pathname) {
     if (!result.ok) {
       const status = result.code === "account_secure" ? 403
         : result.code === "account_rate" ? 429
-          : result.code === "account_storage" || result.code === "account_unconfigured" ? 503
-            : result.code === "account_exists" || result.code === "account_username" ? 409 : 400;
-      return accountApiError(res, status, result.message || "Your account could not be created.", result.code);
-    }
-    return jsonResponse(res, 200, {
-      verificationRequired: true,
-      email: result.email,
-      deliveryFailed: result.deliveryFailed,
-      message: result.deliveryFailed
-        ? "Your account is saved, but the verification email could not be sent. Resend the code to try again."
-        : "We sent a six-digit verification code to your email. Enter it to activate your account.",
-    });
-  }
-
-  if (pathname === "/api/register/resend") {
-    const result = await accounts.requestEmailVerification(body.email, { secure, ip: requestIp(req) });
-    if (!result.ok) {
-      const status = result.code === "account_secure" ? 403
-        : result.code === "account_rate" ? 429
           : result.code === "account_storage" ? 503
-            : result.code === "account_unconfigured" ? 503
-              : result.code === "account_verify_input" ? 400 : 502;
-      const message = result.code === "account_rate"
-        ? "Too many verification emails. Please wait before trying again."
-        : result.code === "account_unconfigured"
-          ? "Email verification is unavailable. Please contact the server owner."
-          : result.code === "account_verify_input"
-            ? "Enter a valid email address."
-            : "The verification email could not be sent. Please try again.";
-      return accountApiError(res, status, message, result.code);
-    }
-    return jsonResponse(res, 200, {
-      ok: true,
-      message: "If that email has a pending registration, a new code will be sent.",
-    });
-  }
-
-  if (pathname === "/api/register/verify") {
-    const result = await accounts.verifyWebsiteRegistration(body.email, body.code, {
-      secure, ip: requestIp(req), remember: body.remember === true,
-    });
-    if (!result.ok) {
-      const status = result.code === "account_secure" ? 403
-        : result.code === "account_rate" ? 429
-          : result.code === "account_storage" ? 503 : 400;
-      const message = result.code === "account_rate"
-        ? "Too many verification attempts. Please wait before trying again."
-        : result.code === "account_storage"
-          ? "Verification succeeded, but sign-in could not be saved. Please sign in."
-          : result.code === "account_verify_input"
-            ? "Enter the six-digit code from your email."
-            : "The code is incorrect or expired. Request a new code and try again.";
-      return accountApiError(res, status, message, result.code);
+            : result.code === "account_exists" || result.code === "account_username" ? 409 : 400;
+      return accountApiError(res, status, result.message || "Your account could not be created.");
     }
     const maxAge = Math.max(0, Math.floor((result.expiresAt - Date.now()) / 1000));
     const cookie = `${ACCOUNT_COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Strict${body.remember === true ? `; Max-Age=${Math.min(maxAge, ACCOUNT_SESSION_TTL_SECONDS)}` : ""}${https ? "; Secure" : ""}`;
@@ -294,9 +260,8 @@ async function handleAccountApi(req, res, pathname) {
     if (!result.ok) {
       const status = result.code === "account_secure" ? 403
         : result.code === "account_rate" ? 429
-          : result.code === "account_storage" ? 503
-            : result.code === "account_unverified" ? 403 : 401;
-      return accountApiError(res, status, result.message || "Email or password is incorrect.", result.code);
+          : result.code === "account_storage" ? 503 : 401;
+      return accountApiError(res, status, result.message || "Email or password is incorrect.");
     }
     const maxAge = Math.max(0, Math.floor((result.expiresAt - Date.now()) / 1000));
     const cookie = `${ACCOUNT_COOKIE}=${result.token}; Path=/; HttpOnly; SameSite=Strict${body.remember === true ? `; Max-Age=${Math.min(maxAge, ACCOUNT_SESSION_TTL_SECONDS)}` : ""}${https ? "; Secure" : ""}`;
@@ -713,7 +678,11 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ values: config ? config.current() : {}, updated: config ? config.updated() : "" }));
     return;
   }
-  if (updates(req, res)) return;
+  // Auto-updates: the manifest the game checks at launch, and the installers.
+  // Returns false for every other path, so the website below is unaffected.
+  if (updates(req, res)) {
+    return;
+  }
   if (req.method !== "GET" && req.method !== "HEAD") {
     res.writeHead(405, { allow: "GET, HEAD" });
     res.end();
@@ -763,9 +732,13 @@ wss.on("connection", (ws, req) => {
     ws.close(1013, "busy");
     return;
   }
-  const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
-  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
   const remoteAddress = req.socket.remoteAddress || "";
+  const ip = trustedProxy(remoteAddress)
+    ? String(req.headers["x-forwarded-for"] || remoteAddress).split(",")[0].trim()
+    : remoteAddress;
+  const forwardedProto = trustedProxy(remoteAddress)
+    ? String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase()
+    : "";
   const loopback = remoteAddress === "::1" || remoteAddress === "127.0.0.1" || remoteAddress === "::ffff:127.0.0.1";
   const secure = !!req.socket.encrypted || forwardedProto === "https" || loopback;
   const c = { id: nextId++, ws, ip, secure, tag: null, species: 0, ready: false, room: null, hello: false, chatTimes: [], mutedUntil: 0, alive: true, msgCount: 0, msgWindow: Date.now() };

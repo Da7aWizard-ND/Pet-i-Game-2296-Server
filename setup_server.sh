@@ -65,7 +65,7 @@ if [[ "$SITE_MODE" == "folder" ]]; then
 else
   $SUDO cp -a "$SITE_SOURCE/index.html" "$SITE_SOURCE/img" /opt/peti-lobby/site/
 fi
-# Published game installers and manifests are optional until the first release.
+# Published installers for the in-game updater (optional: a fresh server has none).
 if [[ -d "$SCRIPT_DIR/releases" ]]; then
   echo "==> Installing game updates"
   $SUDO mkdir -p /opt/peti-lobby/releases

@@ -13,7 +13,7 @@ const BONUS_BOLTS = 250;
 const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{2,23}$/;
 const PROFILE_KEYS = new Set([
   "version", "species", "record", "daily", "bonus", "guide_done", "ctf_guide_done",
-  "bolts", "vend_passes", "wardrobe_owned", "outfit", "specials", "lifetime", "badges",
+	"bolts", "vend_passes", "wardrobe_owned", "outfit", "outfits", "specials", "lifetime", "badges",
   "specials_seen", "special_equipped", "special_daily",
 ]);
 
@@ -195,87 +195,6 @@ function createAccounts({
     }
   }
 
-  async function sendVerificationCode(account, email, ip) {
-    if (!mailer || typeof mailer.sendMail !== "function" || secret.length < 32) {
-      return { ok: false, code: "account_unconfigured" };
-    }
-    const key = emailKey(email);
-    if (!limited(`verify-ip:${ip}`, 5, 60 * 60 * 1000)
-      || !limited(`verify-email:${key}`, 3, 60 * 60 * 1000)) {
-      return { ok: false, code: "account_rate" };
-    }
-    const code = String(crypto.randomInt(100000, 1000000));
-    account.codeHash = codeHash(email, code);
-    account.codeExpiresAt = Date.now() + EMAIL_CODE_TTL;
-    account.verifyAttempts = 0;
-    store.touchAccount(account);
-    if (!await store.flush()) return { ok: false, code: "account_storage" };
-    try {
-      const delivery = await mailer.sendMail({
-        to: email,
-        subject: "Verify your i-Pet account email",
-        text: `Your i-Pet Cyber Store 2096 email verification code is ${code}.\n\nIt expires in 15 minutes. Enter this code to activate your account. If you did not create an account, you can ignore this email.`,
-      });
-      if (delivery && delivery.messageId) log("account verification email accepted by gateway:", delivery.messageId);
-      return { ok: true };
-    } catch (e) {
-      log("account verification email delivery failed:", e instanceof Error ? e.message : "Unknown email gateway error");
-      return { ok: false, code: "email_failed" };
-    }
-  }
-
-  async function verifyPendingAccount(emailValue, codeValue, { secure, ip } = {}) {
-    if (!secure) return { ok: false, code: "account_secure" };
-    const email = normalizeEmail(emailValue);
-    const code = typeof codeValue === "string" ? codeValue.trim() : "";
-    if (!email || !/^\d{6}$/.test(code)) return { ok: false, code: "account_verify_input" };
-    const key = emailKey(email);
-    if (!limited(`verify-confirm-ip:${ip}`, 10, 30 * 60 * 1000)
-      || !limited(`verify-confirm-email:${key}`, 8, 30 * 60 * 1000)) {
-      return { ok: false, code: "account_rate" };
-    }
-    const account = store.accounts.get(key);
-    const expected = Buffer.from(account && !account.verifiedAt && account.codeHash
-      ? account.codeHash : codeHash(email, "000000"), "hex");
-    const actual = Buffer.from(codeHash(email, code), "hex");
-    const matches = expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
-    if (!account || account.verifiedAt || !matches || account.codeExpiresAt <= Date.now()
-      || (account.verifyAttempts || 0) >= 8) {
-      if (account && !account.verifiedAt) {
-        account.verifyAttempts = (account.verifyAttempts || 0) + 1;
-        store.touchAccount(account);
-        if (!await store.flush()) return { ok: false, code: "account_storage" };
-      }
-      return { ok: false, code: "account_verify_invalid" };
-    }
-    const previous = {
-      verifiedAt: account.verifiedAt,
-      codeHash: account.codeHash,
-      codeExpiresAt: account.codeExpiresAt,
-      verifyAttempts: account.verifyAttempts,
-      bolts: account.profile.bolts,
-      rewardGranted: account.rewardGranted,
-      rewardGrantedAt: account.rewardGrantedAt,
-    };
-    activateAccount(account);
-    store.touchAccount(account);
-    if (!await store.flush()) {
-      Object.assign(account, {
-        verifiedAt: previous.verifiedAt,
-        codeHash: previous.codeHash,
-        codeExpiresAt: previous.codeExpiresAt,
-        verifyAttempts: previous.verifyAttempts,
-        rewardGranted: previous.rewardGranted,
-      });
-      account.profile.bolts = previous.bolts;
-      if (previous.rewardGrantedAt === undefined) delete account.rewardGrantedAt;
-      else account.rewardGrantedAt = previous.rewardGrantedAt;
-      store.touchAccount(account);
-      return { ok: false, code: "account_storage" };
-    }
-    return { ok: true, email, key, account };
-  }
-
   function makeSession(c, account, key, ttl = 0) {
     const token = crypto.randomBytes(32).toString("hex");
     const hash = crypto.createHash("sha256").update(token).digest("hex");
@@ -353,15 +272,6 @@ function createAccounts({
     if (account.suspendedAt) {
       return { ok: false, code: "account_suspended", message: "This account is suspended. Contact the game administrator." };
     }
-    if (!account.verifiedAt) {
-      return {
-        ok: false,
-        code: "account_unverified",
-        message: account.websiteRegistrationPending
-          ? "Verify your email on ipet2096.com, then sign in here."
-          : "Verify your email address before signing in.",
-      };
-    }
     let profileLink = null;
     if (client && account.websiteRegistrationPending) {
       const pid = typeof client.localPid === "string" && client.localPid
@@ -394,6 +304,10 @@ function createAccounts({
       account.profileRevision = 0;
       account.profileUpdatedAt = Date.now();
       account.websiteRegistrationPending = false;
+    }
+    if (!account.verifiedAt) {
+      activateAccount(account);
+      store.touchAccount(account);
     }
     const sessionClient = client || {};
     const ttl = remember === null ? 0 : remember ? SESSION_TTL : SESSION_ONLY_TTL;
@@ -485,35 +399,6 @@ function createAccounts({
     return { ok: true };
   }
 
-  async function requestEmailVerification(emailValue, { secure, ip } = {}) {
-    if (!secure) return { ok: false, code: "account_secure" };
-    if (!limited(`verify-request-ip:${ip}`, 5, 60 * 60 * 1000)) {
-      return { ok: false, code: "account_rate" };
-    }
-    const email = normalizeEmail(emailValue);
-    if (!email) return { ok: false, code: "account_verify_input" };
-    const account = store.accounts.get(emailKey(email));
-    if (!account || account.verifiedAt) return { ok: true, pending: false };
-    const result = await sendVerificationCode(account, email, ip);
-    return result.ok ? { ok: true, pending: true } : result;
-  }
-
-  async function verifyWebsiteRegistration(emailValue, codeValue, { secure, ip, remember = false } = {}) {
-    const result = await verifyPendingAccount(emailValue, codeValue, { secure, ip });
-    if (!result.ok) return result;
-    const sessionClient = {};
-    const ttl = remember ? SESSION_TTL : SESSION_ONLY_TTL;
-    const token = makeSession(sessionClient, result.account, result.key, ttl);
-    if (!await store.flush()) {
-      const hash = crypto.createHash("sha256").update(token).digest("hex");
-      sessionIndex.delete(hash);
-      result.account.sessions = result.account.sessions.filter((session) => session.hash !== hash);
-      store.touchAccount(result.account);
-      return { ok: false, code: "account_storage" };
-    }
-    return { ok: true, email: result.email, token, expiresAt: sessionClient.accountExpiresAt };
-  }
-
   async function resetPassword(emailValue, codeValue, passwordValue, { secure, ip } = {}) {
     if (!secure) return { ok: false, code: "account_secure" };
     const email = normalizeEmail(emailValue);
@@ -590,9 +475,6 @@ function createAccounts({
     if (!details) {
       return error(c, "account_input", "Check your username, names, country, age, and date of birth. Age must match date of birth.");
     }
-    if (!mailer || typeof mailer.sendMail !== "function" || secret.length < 32) {
-      return error(c, "account_unconfigured", "Email verification is not configured. Please contact the server owner.");
-    }
     const key = emailKey(email);
     if (!limited(`register-ip:${c.ip}`, 5, 60 * 60 * 1000)
       || !limited(`register-email:${key}`, 3, 60 * 60 * 1000)) {
@@ -638,8 +520,16 @@ function createAccounts({
       account.profile = profile;
       Object.assign(account, details);
     }
+    activateAccount(account);
     store.touchAccount(account);
+    const token = makeSession(c, account, key);
     if (!await store.flush()) {
+      const sessionHash = crypto.createHash("sha256").update(token).digest("hex");
+      sessionIndex.delete(sessionHash);
+      c.account = null;
+      c.accountToken = "";
+      c.accountExpiresAt = 0;
+      c.pid = c.localPid || c.pid;
       if (previousAccount) {
         Object.assign(account, previousAccount);
         store.accounts.set(key, account);
@@ -653,10 +543,9 @@ function createAccounts({
       }
       return error(c, "account_storage", "Your account could not be saved. Please try again.");
     }
-    const delivery = await sendVerificationCode(account, email, c.ip);
     send(c, {
-      t: "account", event: "verification_required", email, email_sent: delivery.ok,
-      delivery_code: delivery.ok ? "" : delivery.code,
+      t: "account", event: "signed_in", email, token, profile: account.profile,
+      profile_revision: getProfileRevision(account), new_account: true, reward: BONUS_BOLTS,
     });
   }
 
@@ -677,9 +566,6 @@ function createAccounts({
         code: "account_input",
         message: "Check your username, names, country, age, and date of birth. Age must match date of birth.",
       };
-    }
-    if (!mailer || typeof mailer.sendMail !== "function" || secret.length < 32) {
-      return { ok: false, code: "account_unconfigured", message: "Email verification is not configured. Please contact the server owner." };
     }
     const key = emailKey(email);
     if (!limited(`register-ip:${ip}`, 5, 60 * 60 * 1000)
@@ -707,80 +593,20 @@ function createAccounts({
     } while ((store.players && store.players.has(pid)) || linkedAccount(pid));
     const account = {
       email, emailKey: key, pid, passwordHash: passwordHashValue,
-      profile: { version: 1, species: 0, bolts: 0 },
-      ...details, verifiedAt: 0, rewardGranted: false, sessions: [], createdAt: Date.now(),
+      profile: { version: 1, species: 0, bolts: BONUS_BOLTS },
+      ...details, verifiedAt: Date.now(), rewardGranted: true, sessions: [], createdAt: Date.now(),
       websiteRegistrationPending: true,
     };
     store.accounts.set(key, account);
+    const sessionClient = {};
+    const ttl = remember ? SESSION_TTL : SESSION_ONLY_TTL;
+    const token = makeSession(sessionClient, account, key, ttl);
     if (!await store.flush()) {
+      sessionIndex.delete(crypto.createHash("sha256").update(token).digest("hex"));
       store.dropAccount(key);
       return { ok: false, code: "account_storage", message: "Your account could not be saved. Please try again." };
     }
-    const delivery = await sendVerificationCode(account, email, ip);
-    return {
-      ok: true, email, verificationRequired: true, deliveryFailed: !delivery.ok,
-    };
-  }
-
-  async function verifyGameRegistration(c, m) {
-    if (!canUseAccount(c)) return;
-    if (c.account) return error(c, "account_signed_in", "You are already signed in.");
-    const email = normalizeEmail(m.email);
-    const pending = email ? store.accounts.get(emailKey(email)) : null;
-    if (!pending || pending.verifiedAt || pending.pid !== c.pid) {
-      return error(c, "account_verify_invalid", "This pending registration could not be verified. Register on the website or sign in if the account is already active.");
-    }
-    const result = await verifyPendingAccount(email, m.code, { secure: c.secure, ip: c.ip });
-    if (!result.ok) {
-      const messages = {
-        account_secure: "Email verification needs a secure connection.",
-        account_rate: "Too many verification attempts. Please wait before trying again.",
-        account_storage: "Verification could not be saved. Please try again.",
-        account_verify_input: "Enter the six-digit code from your email.",
-        account_verify_invalid: "The code is incorrect or expired. Request a new code and try again.",
-      };
-      return error(c, result.code, messages[result.code] || "Email verification failed.");
-    }
-    const token = makeSession(c, result.account, result.key);
-    if (!await store.flush()) {
-      const hash = crypto.createHash("sha256").update(token).digest("hex");
-      sessionIndex.delete(hash);
-      result.account.sessions = result.account.sessions.filter((session) => session.hash !== hash);
-      c.account = null;
-      c.accountToken = "";
-      c.accountExpiresAt = 0;
-      store.touchAccount(result.account);
-      return error(c, "account_storage", "Verification succeeded, but sign-in could not be saved. Sign in again.");
-    }
-    send(c, {
-      t: "account", event: "signed_in", email, token,
-      profile: result.account.profile, profile_revision: getProfileRevision(result.account),
-      new_account: true, reward: BONUS_BOLTS,
-    });
-  }
-
-  async function resendGameRegistration(c, m) {
-    if (!canUseAccount(c)) return;
-    const email = normalizeEmail(m.email);
-    if (!email) return error(c, "account_verify_input", "Enter a valid email address first.");
-    const account = store.accounts.get(emailKey(email));
-    if (account && !account.verifiedAt && account.websiteRegistrationPending) {
-      return error(c, "account_verify_website", "Verify your email on ipet2096.com, then sign in here.");
-    }
-    if (!account || account.verifiedAt || account.pid !== c.pid) {
-      return error(c, "account_verify_invalid", "No pending game registration matches this email and profile.");
-    }
-    const result = await requestEmailVerification(email, { secure: c.secure, ip: c.ip });
-    if (!result.ok) {
-      const messages = {
-        account_rate: "Too many verification emails. Please wait before trying again.",
-        account_storage: "The verification email could not be prepared. Please try again.",
-        account_unconfigured: "Email verification is not configured. Please contact the server owner.",
-        email_failed: "The verification email could not be sent. Please try again shortly.",
-      };
-      return error(c, result.code, messages[result.code] || "Could not resend the verification email.");
-    }
-    send(c, { t: "account", event: "verification_required", email, resent: true });
+    return { ok: true, email, token, expiresAt: sessionClient.accountExpiresAt };
   }
 
   async function login(c, m) {
@@ -1023,8 +849,6 @@ function createAccounts({
 
   const handlers = {
     account_register: register,
-    account_verify: verifyGameRegistration,
-    account_verify_resend: resendGameRegistration,
     account_login: login,
     account_sync: sync,
     account_logout: logout,
@@ -1037,7 +861,7 @@ function createAccounts({
 
   return {
     handlers, restoreSession, authenticate, accountForSession, revokeSession,
-    requestPasswordReset, requestEmailVerification, verifyWebsiteRegistration, resetPassword, registerWebsite,
+    requestPasswordReset, resetPassword, registerWebsite,
   };
 }
 

@@ -38,26 +38,47 @@ The website's live lobby badge reads the online player count from `/status`.
 Then put `wss://<duckdns-name>.duckdns.org` in `scripts/net.gd`
 (`SERVER_URL`). The web build on an https page can only connect to `wss://`.
 
-## Game auto-updates
+## Releases and auto-updates
 
-The game checks `/update.json` at launch and downloads published installers
-from `/releases/`. Publish an installer from the project root with
-`node server/tools/publish-update.js <installer.exe> <version> [notes]`, then
-copy `server/releases` into this deployment folder before uploading it and
-rerunning `setup_server.sh`. The setup script installs `updates.js` and copies
-the optional `releases/` folder into the running server.
+The game updates itself through this same server. At launch `scripts/updater.gd`
+downloads `/update.json`, compares the version numbers and, depending on the
+player's Settings switches, either installs the newer build silently or asks
+first. Installers are served from `/releases/<file>`.
+
+1. Build the installer with Inno Setup (see `installer/`).
+2. Publish it from the repo root:
+
+       node server/tools/publish-update.js "export/installer/i-Pet-Cyber-Store-2096-Setup-1.10.10.exe" 1.10.10 "What changed"
+
+   That copies it to `server/releases/iPetSetup-1.10.10.exe`, hashes it and
+   writes `server/releases/stable.json`.
+3. Copy `server/releases` into `server/Pet-i Game 2296 Server/releases`, then
+   upload that complete deployment folder and rerun `setup_server.sh`.
+   Installed games update on their next launch. The setup script copies the
+   optional `releases/` folder and installs `updates.js`.
+
+The manifest is written last, so a game never sees a version whose file has not
+been uploaded yet. Extra options: `--channel=beta` writes `beta.json` (the game
+asks for it with `updater/channel`), `--min=1.10.0` sets the oldest version
+allowed, and `--mandatory` removes the Later button.
+
+Keep `config/version` in `project.godot` and `MyAppVersion` in the installer
+equal to the number you publish. The `sha256` in the manifest is checked before
+the installer runs: that catches a broken or partial upload, not a compromised
+server, so sign the installer when the game is sold.
 
 ## Email accounts and profile sync
 
 The website and in-game Account page can create an account using an email
 address, unique username, first name, surname, country, age and date of birth.
-Email ownership is confirmed with a six-digit code during registration. Codes
-expire after 15 minutes, and new accounts receive 250 bolts after verification.
-A website-created account links the existing local game profile on the first
-sign-in from the updated game client. Registered gameplay
+Email ownership is not confirmed during registration and no code is sent; users
+should enter an address they can access for password recovery. New accounts
+receive 250 bolts once. A website-created account links the existing local game
+profile on the first sign-in from the updated game client. Registered gameplay
 progress—including bolts, wardrobe, special items, challenges, badges and
 stats—is stored on the server and synced when online. Device preferences
 remain local.
+Device preferences remain local.
 
 The website's **Sign in** button uses the same email and password.
 Players can view their saved profile there, choose **Remember me on this
@@ -82,10 +103,11 @@ actions use WSS.
 
 - `setup_server.sh`: installs the bundled server modules and website on Ubuntu.
 - `lobby_server.js`: WebSocket lobby, game relay and HTTP site server.
-- `updates.js`: serves update manifests and published installers.
 - `accounts.js`: account registration, password authentication and profile sync.
 - `store.js`: persistent MySQL or JSON-file storage.
 - `social.js`, `codes.js`, `config.js`: online profile, gift-code and live-config handlers.
+- `updates.js`: serves `/update.json` and the installers in `releases/`.
+- `tools/publish-update.js`: hashes a built installer and writes the manifest.
 - `filter.js`: chat/tag word filter and contact-info blocker. Add words to
   `BLOCKED` (lower case).
 - `reports.log`: created when someone presses Report; each line has who
