@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "min_version": "1.12.0",
-  "url": "/releases/iPetSetup-1.12.0.exe",
-  "sha256": "e9e4ceac8d674a99a39f95c71fcd8a7ae3b8112ca381409081416160aca6210d",
-  "size": 37242556,
-  "notes": "1.12.0 beta: species-specific pet outfits and updated virtual pet care",
+  "url": "/releases/iPetSetup-1.12.1.exe",
+  "sha256": "2f35f8f8737be49e0562fa53e934d3a9d190d6daba668d668bfd9da74775b7a3",
+  "size": 37413699,
+  "notes": "1.12.1 beta: map readability and visual polish, per-pet wardrobe updates, and virtual pet care improvements.",
   "mandatory": false,
-  "published": "2026-11-27T09:46:45.012Z"
+  "published": "2026-11-27T18:01:31.186Z"
 }
