@@ -7,5 +7,10 @@
   "size": 37413699,
   "notes": "1.12.1 beta: map readability and visual polish, per-pet wardrobe updates, and virtual pet care improvements.",
   "mandatory": false,
-  "published": "2026-11-27T18:01:31.186Z"
+  "published": "2026-11-27T18:01:31.186Z",
+  "android": {
+    "url": "/releases/i-Pet-Cyber-Store-2096-1.12.1-beta.apk",
+    "sha256": "c80075d281239b8ffb26f0900cb771b25912da5ec638aa41a53e7d716f3be830",
+    "size": 61013667
+  }
 }

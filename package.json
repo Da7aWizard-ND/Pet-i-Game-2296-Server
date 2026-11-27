@@ -5,7 +5,7 @@
   "main": "lobby_server.js",
   "private": true,
   "scripts": {
-    "build": "echo build",
+    "build": "node --check lobby_server.js && node --check accounts.js && node --check codes.js && node --check email_gateway.js && node --check filter.js && node --check social.js && node --check store.js && node --check updates.js",
     "test": "node --test",
     "start": "node lobby_server.js",
     "dev": "node lobby_server.js"
